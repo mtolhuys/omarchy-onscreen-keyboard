@@ -1,0 +1,82 @@
+{
+  "id": "en-us",
+  "rowInsets": [0, 0.025, 0.05, 0.025, 0.08],
+  "name": "English (US)",
+  "rows": [
+    [
+      { "id": "escape", "kind": "action", "label": "Esc", "width": 1.25 },
+      { "id": "digit1", "kind": "printable", "label": "1", "shifted": "!", "alternatives": [{ "id": "exclamation", "kind": "printable", "label": "!" }] },
+      { "id": "digit2", "kind": "printable", "label": "2", "shifted": "@", "alternatives": [{ "id": "at", "kind": "printable", "label": "@" }] },
+      { "id": "digit3", "kind": "printable", "label": "3", "shifted": "#", "alternatives": [{ "id": "hash", "kind": "printable", "label": "#" }] },
+      { "id": "digit4", "kind": "printable", "label": "4", "shifted": "$", "alternatives": [{ "id": "dollar", "kind": "printable", "label": "$" }] },
+      { "id": "digit5", "kind": "printable", "label": "5", "shifted": "%", "alternatives": [{ "id": "percent", "kind": "printable", "label": "%" }] },
+      { "id": "digit6", "kind": "printable", "label": "6", "shifted": "^", "alternatives": [{ "id": "caret", "kind": "printable", "label": "^" }] },
+      { "id": "digit7", "kind": "printable", "label": "7", "shifted": "&", "alternatives": [{ "id": "ampersand", "kind": "printable", "label": "&" }] },
+      { "id": "digit8", "kind": "printable", "label": "8", "shifted": "*", "alternatives": [{ "id": "asterisk", "kind": "printable", "label": "*" }] },
+      { "id": "digit9", "kind": "printable", "label": "9", "shifted": "(", "alternatives": [{ "id": "parenleft", "kind": "printable", "label": "(" }] },
+      { "id": "digit0", "kind": "printable", "label": "0", "shifted": ")", "alternatives": [{ "id": "parenright", "kind": "printable", "label": ")" }] },
+      { "id": "minus", "kind": "printable", "label": "-", "shifted": "_", "alternatives": [{ "id": "underscore", "kind": "printable", "label": "_" }] },
+      { "id": "equal", "kind": "printable", "label": "=", "shifted": "+", "alternatives": [{ "id": "plus", "kind": "printable", "label": "+" }] },
+      { "id": "backspace", "kind": "action", "label": "⌫", "width": 1.7 }
+    ],
+    [
+      { "id": "tab", "kind": "action", "label": "Tab", "width": 1.5 },
+      { "id": "q", "kind": "printable", "label": "q", "shifted": "Q" },
+      { "id": "w", "kind": "printable", "label": "w", "shifted": "W" },
+      { "id": "e", "kind": "printable", "label": "e", "shifted": "E" },
+      { "id": "r", "kind": "printable", "label": "r", "shifted": "R" },
+      { "id": "t", "kind": "printable", "label": "t", "shifted": "T" },
+      { "id": "y", "kind": "printable", "label": "y", "shifted": "Y" },
+      { "id": "u", "kind": "printable", "label": "u", "shifted": "U" },
+      { "id": "i", "kind": "printable", "label": "i", "shifted": "I" },
+      { "id": "o", "kind": "printable", "label": "o", "shifted": "O" },
+      { "id": "p", "kind": "printable", "label": "p", "shifted": "P" },
+      { "id": "bracketleft", "kind": "printable", "label": "[", "shifted": "{", "alternatives": [{ "id": "braceleft", "kind": "printable", "label": "{" }] },
+      { "id": "bracketright", "kind": "printable", "label": "]", "shifted": "}", "alternatives": [{ "id": "braceright", "kind": "printable", "label": "}" }] },
+      { "id": "backslash", "kind": "printable", "label": "\\", "shifted": "|", "width": 1.2, "alternatives": [{ "id": "bar", "kind": "printable", "label": "|" }] }
+    ],
+    [
+      { "id": "a", "kind": "printable", "label": "a", "shifted": "A" },
+      { "id": "s", "kind": "printable", "label": "s", "shifted": "S" },
+      { "id": "d", "kind": "printable", "label": "d", "shifted": "D" },
+      { "id": "f", "kind": "printable", "label": "f", "shifted": "F" },
+      { "id": "g", "kind": "printable", "label": "g", "shifted": "G" },
+      { "id": "h", "kind": "printable", "label": "h", "shifted": "H" },
+      { "id": "j", "kind": "printable", "label": "j", "shifted": "J" },
+      { "id": "k", "kind": "printable", "label": "k", "shifted": "K" },
+      { "id": "l", "kind": "printable", "label": "l", "shifted": "L" },
+      { "id": "semicolon", "kind": "printable", "label": ";", "shifted": ":", "alternatives": [{ "id": "colon", "kind": "printable", "label": ":" }] },
+      { "id": "apostrophe", "kind": "printable", "label": "'", "shifted": "\"", "alternatives": [{ "id": "doublequote", "kind": "printable", "label": "\"" }] },
+      { "id": "enter", "kind": "action", "label": "Enter", "width": 1.8 }
+    ],
+    [
+      { "id": "shift", "kind": "modifier", "label": "Shift", "width": 1.7 },
+      { "id": "z", "kind": "printable", "label": "z", "shifted": "Z" },
+      { "id": "x", "kind": "printable", "label": "x", "shifted": "X" },
+      { "id": "c", "kind": "printable", "label": "c", "shifted": "C" },
+      { "id": "v", "kind": "printable", "label": "v", "shifted": "V" },
+      { "id": "b", "kind": "printable", "label": "b", "shifted": "B" },
+      { "id": "n", "kind": "printable", "label": "n", "shifted": "N" },
+      { "id": "m", "kind": "printable", "label": "m", "shifted": "M" },
+      { "id": "comma", "kind": "printable", "label": ",", "shifted": "<", "alternatives": [{ "id": "less", "kind": "printable", "label": "<" }] },
+      { "id": "period", "kind": "printable", "label": ".", "shifted": ">", "alternatives": [{ "id": "greater", "kind": "printable", "label": ">" }] },
+      { "id": "slash", "kind": "printable", "label": "/", "shifted": "?", "alternatives": [{ "id": "question", "kind": "printable", "label": "?" }] }
+    ],
+    [
+      { "id": "ctrl", "kind": "modifier", "label": "Ctrl", "width": 1.35 },
+      { "id": "alt", "kind": "modifier", "label": "Alt", "width": 1.25 },
+      { "id": "super", "kind": "modifier", "label": "\ue900", "fontFamily": "omarchy", "width": 1.5 },
+      { "id": "grave", "kind": "printable", "label": "`", "shifted": "~", "alternatives": [{ "id": "tilde", "kind": "printable", "label": "~" }] },
+      { "id": "space", "kind": "printable", "label": "Space", "shifted": "Space", "width": 5.4 }
+    ]
+  ],
+  "navigation": {
+    "type": "inverted-t",
+    "keys": [
+      { "id": "up", "kind": "action", "label": "↑" },
+      { "id": "left", "kind": "action", "label": "←" },
+      { "id": "down", "kind": "action", "label": "↓" },
+      { "id": "right", "kind": "action", "label": "→" }
+    ]
+  }
+}
