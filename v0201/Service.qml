@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import "models/HardwareKeyboardDetector.js" as HardwareKeyboardDetector
-import "models/KeyboardPolicy.js" as KeyboardPolicy
+import "models/KeyboardVisibility.js" as KeyboardVisibility
 import "models/KeyboardLayout.js" as KeyboardLayout
 import "models/KeyMapper.js" as KeyMapper
 import "models/KeyDispatch.js" as KeyDispatch
@@ -17,13 +17,14 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string runtimeBuild: "0.1.21"
+  readonly property string runtimeBuild: "0.2.1"
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
-  property var policy: KeyboardPolicy.create()
+  property var visibilityState: KeyboardVisibility.create()
   property var keyboardState: KeyboardLayout.createState()
   property var keyboardLayout: ({ id: "", rows: [] })
   property var keyDispatch: KeyDispatch.create()
-  property string backendStatus: "ready"
+  property string backendStatus: "preparing"
+  property bool backendPrepared: false
   property bool suppressKeyExit: false
   property var windowReceipt: null
   property var windowCommands: []
@@ -34,13 +35,13 @@ Item {
   property int measuredSeamCorrection: 0
   property bool alternativesVisible: false
 
-  readonly property bool keyboardVisible: policy.visible === true
-  readonly property bool keyboardEnabled: KeyboardPolicy.keyboardEnabled(policy)
-  readonly property string policyLabel: KeyboardPolicy.label(policy)
+  readonly property bool keyboardVisible: visibilityState.visible === true
   readonly property bool shiftActive: KeyboardLayout.modifierActive(keyboardState, "shift")
   readonly property bool backendBusy: keyDispatch.active !== null
   readonly property int bottomOuterGap: detectedBottomOuterGap >= 0
     ? detectedBottomOuterGap : Style.gapsOut * 2
+
+  onPluginDirChanged: prepareBackend()
 
   onKeyboardVisibleChanged: {
     if (keyboardVisible) {
@@ -71,51 +72,29 @@ Item {
     return screens.length > 0 ? screens[0] : null
   }
 
-  function applyPolicy(event) { policy = KeyboardPolicy.reduce(policy, event) }
-  function showKeyboard() { applyPolicy({ type: "show" }); return "ok" }
+  function applyVisibility(event) { visibilityState = KeyboardVisibility.reduce(visibilityState, event) }
+  function showKeyboard() { applyVisibility({ type: "show" }); return "ok" }
   function hideKeyboard() {
-    applyPolicy({ type: "hide" })
+    applyVisibility({ type: "hide" })
     cancelInput()
     return "ok"
   }
   function toggleKeyboard() {
-    applyPolicy({ type: "toggle" })
-    if (!policy.visible) cancelInput()
+    applyVisibility({ type: "toggle" })
+    if (!visibilityState.visible) cancelInput()
     return "ok"
-  }
-  function toggleTouchKeyboard() {
-    if (policy.visible) return hideKeyboard()
-
-    var detector = policy.detector || {}
-    if (policy.mode === "off") {
-      if (detector.available === true && detector.active === true) return setMode("auto")
-      return showKeyboard()
-    }
-    if (policy.mode === "auto") return setMode("on")
-    return setMode("off")
-  }
-  function setMode(requested) {
-    var value = String(requested || "").toLowerCase()
-    if (KeyboardPolicy.MODES.indexOf(value) === -1) return "invalid"
-    applyPolicy({ type: "mode", mode: value })
-    if (!policy.visible) cancelInput()
-    return "ok"
-  }
-  function cycleMode() {
-    var index = KeyboardPolicy.MODES.indexOf(policy.mode)
-    return setMode(KeyboardPolicy.MODES[(index + 1) % KeyboardPolicy.MODES.length])
   }
   function registerWidgetBuild(value) {
     if (String(value || "") === runtimeBuild) widgetBuild = runtimeBuild
   }
   function applyDetector(detector) {
     if (!detector) return
-    var current = policy.detector || {}
+    var current = visibilityState.detector || {}
     if (current.available === detector.available && current.active === detector.active
         && String(current.source || "") === String(detector.source || "")
         && String(current.name || "") === String(detector.name || "")) return
-    applyPolicy({ type: "detector", detector: detector })
-    if (!policy.visible) cancelInput()
+    applyVisibility({ type: "detector", detector: detector })
+    if (!visibilityState.visible) cancelInput()
   }
   function handleRawEvent(event) {
     var detector = HardwareKeyboardDetector.parseSwitchEvent(event)
@@ -138,6 +117,10 @@ Item {
     var result = KeyboardLayout.activate(keyboardState, key)
     keyboardState = result.state
     if (!result.action) return "ok"
+    if (!backendPrepared) {
+      keyboardState = KeyboardLayout.cancel(keyboardState)
+      return "backend-unavailable"
+    }
     var command = KeyMapper.commandFor(result.action)
     if (!command) {
       keyboardState = KeyboardLayout.cancel(keyboardState)
@@ -158,14 +141,22 @@ Item {
     return KeyboardLayout.modifierActive(keyboardState, name)
   }
   function startKeyCommand(command) {
-    keyProcess.command = command
+    var resolved = command.slice()
+    resolved[0] = pluginDir + "/bin/osk-input"
+    keyProcess.command = resolved
     keyProcess.running = true
+  }
+  function prepareBackend() {
+    if (!pluginDir || backendPrepare.running) return
+    backendStatus = "preparing"
+    backendPrepare.command = [pluginDir + "/bin/osk-input", "--prepare"]
+    backendPrepare.running = true
   }
   function cancelInput() {
     alternativesVisible = false
     keyboardState = KeyboardLayout.cancel(keyboardState)
     keyDispatch = KeyDispatch.cancel(keyDispatch)
-    backendStatus = "ready"
+    backendStatus = backendPrepared ? "ready" : "preparing"
     if (keyProcess.running) {
       suppressKeyExit = true
       keyProcess.running = false
@@ -291,15 +282,12 @@ Item {
       version: 1,
       runtimeBuild: root.runtimeBuild,
       widgetBuild: root.widgetBuild,
-      mode: String(policy.mode || "auto"),
-      policyLabel: root.policyLabel,
       detector: {
-        available: policy.detector && policy.detector.available === true,
-        active: policy.detector && policy.detector.active === true,
-        source: String(policy.detector && policy.detector.source || "unknown"),
-        name: String(policy.detector && policy.detector.name || "")
+        available: visibilityState.detector && visibilityState.detector.available === true,
+        active: visibilityState.detector && visibilityState.detector.active === true,
+        source: String(visibilityState.detector && visibilityState.detector.source || "unknown"),
+        name: String(visibilityState.detector && visibilityState.detector.name || "")
       },
-      keyboardEnabled: root.keyboardEnabled,
       visible: root.keyboardVisible,
       shift: root.shiftActive,
       modifiers: {
@@ -322,7 +310,10 @@ Item {
     restoreWindowDetached()
   }
 
-  Component.onCompleted: requestGapProbe()
+  Component.onCompleted: {
+    requestGapProbe()
+    prepareBackend()
+  }
 
   Connections {
     target: Hyprland
@@ -367,6 +358,15 @@ Item {
     id: keyProcess
     command: []
     onExited: function(exitCode) { root.handleKeyExit(exitCode) }
+  }
+
+  Process {
+    id: backendPrepare
+    command: []
+    onExited: function(exitCode) {
+      root.backendPrepared = exitCode === 0
+      root.backendStatus = root.backendPrepared ? "ready" : "backend-error"
+    }
   }
 
   Process {
@@ -415,7 +415,6 @@ Item {
     function show(): string { return root.showKeyboard() }
     function hide(): string { return root.hideKeyboard() }
     function toggle(): string { return root.toggleKeyboard() }
-    function mode(value: string): string { return root.setMode(value) }
     function ping(): string { return "ok" }
   }
 
@@ -424,7 +423,7 @@ Item {
     screen: root.targetScreen()
     visible: root.keyboardVisible && root.keyboardLayout.rows.length > 0 && screen !== null
     anchors { left: true; right: true; bottom: true }
-    implicitHeight: screen ? Math.min(Style.space(286), Math.max(Style.space(276), Math.round(screen.height * 0.35))) : Style.space(276)
+    implicitHeight: screen ? Math.min(Style.space(350), Math.max(Style.space(326), Math.round(screen.height * 0.42))) : Style.space(326)
     color: "transparent"
     // Hyprland places the configured bottom outer gap between a tiled client
     // and this exclusive layer. Read that edge directly because gaps_out may

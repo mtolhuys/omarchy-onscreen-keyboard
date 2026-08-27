@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+SOURCE="$ROOT/native/osk-input.c"
+PROTOCOL="$ROOT/native/virtual-keyboard-unstable-v1.xml"
+CACHE_ROOT="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-onscreen-keyboard/0.2.1"
+BINARY="$CACHE_ROOT/osk-input"
+STAMP="$CACHE_ROOT/source.sha256"
+
+fail() {
+  echo "osk-input: $*" >&2
+  exit 1
+}
+
+source_hash=$(sha256sum "$SOURCE" "$PROTOCOL" | sha256sum | awk '{print $1}')
+installed_hash=""
+[[ ! -f $STAMP ]] || read -r installed_hash <"$STAMP"
+
+if [[ ! -x $BINARY || $installed_hash != "$source_hash" ]]; then
+  command -v wayland-scanner >/dev/null || fail "wayland-scanner is required"
+  command -v cc >/dev/null || fail "a C compiler is required"
+  pkg-config --exists wayland-client xkbcommon || fail "Wayland and xkbcommon development files are required"
+
+  mkdir -p "$CACHE_ROOT"
+  build_dir=$(mktemp -d "$CACHE_ROOT/.build.XXXXXX")
+  trap 'rm -r -- "$build_dir"' EXIT
+  wayland-scanner client-header "$PROTOCOL" "$build_dir/virtual-keyboard-unstable-v1-client-protocol.h"
+  wayland-scanner private-code "$PROTOCOL" "$build_dir/virtual-keyboard-unstable-v1-protocol.c"
+  cc -std=c11 -O2 -Wall -Wextra -Werror \
+    $(pkg-config --cflags wayland-client xkbcommon) \
+    -I"$build_dir" "$SOURCE" "$build_dir/virtual-keyboard-unstable-v1-protocol.c" \
+    $(pkg-config --libs wayland-client xkbcommon) -o "$build_dir/osk-input"
+  install -m 0755 "$build_dir/osk-input" "$BINARY"
+  printf '%s\n' "$source_hash" >"$STAMP"
+fi
+
+if [[ ${1:-} == "--prepare" && $# == 1 ]]; then
+  exit 0
+fi
+
+[[ $# == 2 && $1 =~ ^[0-9]+$ && $2 =~ ^[0-9]+$ ]] || fail "expected MODIFIER_MASK EVDEV_KEYCODE"
+exec "$BINARY" "$1" "$2"

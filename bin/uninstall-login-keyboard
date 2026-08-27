@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+source "$ROOT/bin/login-keyboard-lib.sh"
+
+force=false
+case ${1:-} in
+  "") ;;
+  --force) force=true ;;
+  -h|--help)
+    printf 'Usage: sudo %s [--force]\n' "$0"
+    exit 0
+    ;;
+  *) osk_fail "unknown uninstall option: $1" || true; exit 64 ;;
+esac
+
+SYSTEM_ROOT=$(osk_system_root) || exit 64
+osk_require_privilege "$SYSTEM_ROOT" || exit 77
+osk_validate_sources
+osk_inspect "$SYSTEM_ROOT"
+
+if [[ $OSK_STATE == "not-installed" ]]; then
+  printf 'Login keyboard integration is not installed.\n'
+  exit 0
+fi
+if [[ $OSK_STATE == "modified" ]] && ! $force; then
+  osk_fail "integration is incomplete or modified; inspect it, then rerun with --force to remove only known owned paths" || true
+  exit 3
+fi
+
+rm -f -- "$OSK_DROPIN"
+for file in "${OSK_THEME_FILES[@]}"; do
+  rm -f -- "$OSK_THEME_DIR/$file"
+done
+rm -f -- "$OSK_INSTALLED_MANIFEST"
+
+if ! rmdir -- "$OSK_THEME_DIR" 2>/dev/null; then
+  printf 'Removed owned integration files; preserved additional files in %s.\n' "$OSK_THEME_DIR"
+else
+  printf 'Removed Omarchy login keyboard integration.\n'
+fi
+printf 'The stock SDDM theme will return after you reboot; SDDM was not restarted.\n'

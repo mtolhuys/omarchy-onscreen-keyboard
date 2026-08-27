@@ -43,7 +43,8 @@ printf 'ok - runtime uses Item entry points and contains no forbidden input path
 
 grep -q 'WlrLayershell.keyboardFocus: WlrKeyboardFocus.None' "$SERVICE"
 grep -q 'KeyMapper.commandFor' "$SERVICE"
-grep -q 'keyProcess.command = command' "$SERVICE"
+grep -q 'resolved\[0\] = pluginDir + "/bin/osk-input"' "$SERVICE"
+grep -q 'keyProcess.command = resolved' "$SERVICE"
 grep -q 'KeyDispatch.enqueue' "$SERVICE"
 grep -q 'KeyDispatch.cancel' "$SERVICE"
 printf 'ok - keyboard is non-focusable and serializes only mapped argv actions\n'
@@ -61,8 +62,7 @@ grep -q 'function status(): string' "$SERVICE"
 grep -q 'function show(): string' "$SERVICE"
 grep -q 'function hide(): string' "$SERVICE"
 grep -q 'function toggle(): string' "$SERVICE"
-grep -q 'function mode(value: string): string' "$SERVICE"
-grep -q 'function toggleTouchKeyboard()' "$SERVICE"
+reject_grep -q 'function mode(value: string): string\|function setMode\|function cycleMode\|function toggleTouchKeyboard' "$SERVICE"
 grep -q "readonly property string runtimeBuild: \"$VERSION\"" "$SERVICE"
 grep -q 'runtimeBuild: root.runtimeBuild' "$SERVICE"
 grep -q 'widgetBuild: root.widgetBuild' "$SERVICE"
@@ -73,7 +73,8 @@ grep -q 'implicitHeight: Style.bar.sizeHorizontal' "$WIDGET"
 reject_grep -q 'implicitWidth: barSize' "$WIDGET"
 reject_grep -q 'showTooltip' "$WIDGET"
 grep -q 'function triggerPress(button)' "$WIDGET"
-grep -q 'controller.toggleTouchKeyboard()' "$WIDGET"
+grep -q 'if (button === Qt.LeftButton) controller.toggleKeyboard()' "$WIDGET"
+reject_grep -q 'Qt.RightButton\|cycleMode' "$WIDGET"
 reject_grep -q 'MouseArea {' "$WIDGET"
 reject_grep -q 'text: root.modeLabel' "$WIDGET"
 grep -q 'onBarChanged:' "$WIDGET"
@@ -104,19 +105,40 @@ grep -q 'alternatesVisible: root.alternativesVisible' "$SERVICE"
 jq -e '[.rows[][] | .alternatives? // empty | .[]] | length >= 20' "$ROOT/layouts/en-us.json" >/dev/null
 printf 'ok - long press opens layout-owned developer alternatives with public visibility state\n'
 
-grep -q 'space: \[" ", " "\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q 'action.id === "space".*command.push("-k", "space")' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q 'WTYPE_MODIFIERS.*super: "logo"' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"alt+tab": \["hyprctl", "dispatch", "hl.dsp.window.cycle_next()"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"super+space": \["omarchy-menu", "toggle"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"alt+super+space": \["omarchy-menu", "toggle", "apps"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"shift+super+space": \["omarchy-toggle-bar"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"ctrl+super+space": \["omarchy-menu", "toggle", "background"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q '"ctrl+shift+super+space": \["omarchy-menu", "toggle", "theme"\]' "$RUNTIME_DIR/models/KeyMapper.js"
-grep -q 'for (var released = modifiers.length - 1; released >= 0; released--)' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q 'digit3: 4' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q 'space: 57' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q 'MODIFIER_MASKS.*super: 64' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -Fq 'return ["osk-input", String(mask), String(KEY_CODES[key.id])]' "$RUNTIME_DIR/models/KeyMapper.js"
+reject_grep -R -n -E 'hyprctl|omarchy-menu|omarchy-toggle-bar' "$RUNTIME_DIR/models/KeyMapper.js" "$RUNTIME_DIR/models/KeyDispatch.js"
+grep -Fq 'command[0] !== "osk-input"' "$RUNTIME_DIR/models/KeyDispatch.js"
+grep -q 'VALID_KEY_CODES.indexOf(code)' "$RUNTIME_DIR/models/KeyDispatch.js"
+grep -q 'id: backendPrepare' "$SERVICE"
+grep -q '"--prepare"' "$SERVICE"
+test -x "$ROOT/bin/osk-input"
+test -f "$ROOT/native/osk-input.c"
+test -f "$ROOT/native/virtual-keyboard-unstable-v1.xml"
+grep -q 'xkb_keymap_new_from_names' "$ROOT/native/osk-input.c"
+grep -q 'zwp_virtual_keyboard_v1_key(' "$ROOT/native/osk-input.c"
+reject_grep -R -n -E '/dev/uinput|ydotool|sudo|pkexec|systemctl' \
+  "$ROOT/bin/osk-input" "$ROOT/native" "$RUNTIME_DIR/models/KeyMapper.js" "$RUNTIME_DIR/models/KeyDispatch.js"
 grep -q 'function cancelInput()' "$SERVICE"
 grep -q 'Component.onDestruction:' "$SERVICE"
-printf 'ok - Space and one-shot modifiers use closed argv mappings with reverse release cleanup\n'
+printf 'ok - fixed evdev input preserves symbol and physical-code bindings without privilege\n'
+
+for file in metadata.desktop theme.conf Main.qml Keyboard.qml; do
+  test -f "$ROOT/system/sddm/omarchy-onscreen-keyboard/$file"
+done
+grep -q '^\[Theme\]' "$ROOT/system/sddm/99-z-omarchy-onscreen-keyboard.conf"
+grep -q '^Current=omarchy-onscreen-keyboard$' "$ROOT/system/sddm/99-z-omarchy-onscreen-keyboard.conf"
+grep -q 'sddm.login' "$ROOT/system/sddm/omarchy-onscreen-keyboard/Main.qml"
+reject_grep -R -n -E 'QtQuick\.VirtualKeyboard|wtype|hyprctl|Process' "$ROOT/system/sddm"
+for script in install-login-keyboard login-keyboard-status uninstall-login-keyboard; do
+  test -x "$ROOT/bin/$script"
+done
+grep -q 'osk_require_privilege' "$ROOT/bin/install-login-keyboard"
+grep -q 'osk_require_privilege' "$ROOT/bin/uninstall-login-keyboard"
+grep -q 'integration-manifest' "$ROOT/bin/login-keyboard-lib.sh"
+printf 'ok - optional SDDM integration is self-contained, explicit, and ownership-tracked\n'
 
 grep -q 'WindowAvoidance.plan' "$SERVICE"
 grep -q 'function restoreWindow' "$SERVICE"
@@ -134,21 +156,21 @@ printf 'ok - keyboard applies gap-compensated reversible overlap avoidance\n'
 
 reject_grep -q 'controller.policyLabel' "$RUNTIME_DIR/KeyboardSurface.qml"
 reject_grep -q 'Tablet keyboard\|Use Auto\|Force On\|Hide\|headerHeight' "$RUNTIME_DIR/KeyboardSurface.qml"
-printf 'ok - keyboard surface contains only the keyboard; mode and dismissal stay on the bar\n'
+printf 'ok - keyboard surface contains only the keyboard; visibility stays on the bar\n'
 
 reject_grep -q 'readonly property bool policyEnabled' "$WIDGET"
 grep -q 'root.keyboardVisible ? Style.selectedFillFor' "$WIDGET"
 grep -q 'color: root.barForeground' "$WIDGET"
 grep -q 'opacity: root.keyboardVisible ? 1 : 0.45' "$WIDGET"
 reject_grep -q 'property color forcedColor' "$WIDGET"
-grep -q 'KeyboardPolicy.label(policy)' "$SERVICE"
+reject_grep -q 'KeyboardPolicy\|policyLabel\|keyboardEnabled\|mode:' "$SERVICE"
 printf 'ok - bar icon is bright when visible and dim when hidden\n'
 
 README="$ROOT/README.md"
 grep -Fq 'omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable' "$README"
 grep -Fq 'omarchy plugin update dev.omarchy.onscreen-keyboard' "$README"
 grep -Fq 'omarchy plugin remove dev.omarchy.onscreen-keyboard' "$README"
-grep -Fq '## Migrating from 0.1.20' "$README"
+reject_grep -Eqi '\b(auto|mode|right-click)\b' "$README"
 reject_grep -Fq '<path-to-this-repo>' "$README"
 reject_grep -Eq '/home/|test-runs/' "$README"
 printf 'ok - README uses public lifecycle commands and portable test instructions\n'

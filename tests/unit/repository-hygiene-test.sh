@@ -4,28 +4,18 @@ set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 SELF=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")
-README="$ROOT/README.md"
-OLD_ID='dev.omarchy.tablet-mode'
-MIGRATION_COMMAND="omarchy plugin remove $OLD_ID"
 
 if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
     xargs -0 grep -nHE \
-      '(/home/mtolhu[i]js|plugin[-]lab|OMARCHY_LAB_|omarchy_host_test|ssh_guest|ssh_session|wait_for_guest_state|capture_console|GUEST_PASSWORD)'; then
+      '(/home/[^/[:space:]]+/Projects/|plugin[-]lab|OMARCHY_LAB_|omarchy_host_test|ssh_guest|ssh_session|wait_for_guest_state|capture_console|GUEST_PASSWORD)'; then
   printf 'private acceptance-harness dependency found in the public checkout\n' >&2
   exit 1
 fi
 
-if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" ! -path "$README" -print0 |
+if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
     xargs -0 grep -nHE \
       '(omarchy[-]tablet[-]mode|dev[.]omarchy[.]tablet[-]mode|omarchy-shell tablet[-]mode|omarchy[-]tablet[-]keyboard|TabletDetector|TabletPolicy|tabletActive|TABLET_PLUGIN_)'; then
   printf 'obsolete product identity found in the public checkout\n' >&2
-  exit 1
-fi
-
-if [[ $(grep -Fxc "$MIGRATION_COMMAND" "$README") -ne 1 ]] ||
-    grep -nE '(omarchy[-]tablet[-]mode|dev[.]omarchy[.]tablet[-]mode|omarchy-shell tablet[-]mode|omarchy[-]tablet[-]keyboard)' "$README" |
-      grep -Fv "$MIGRATION_COMMAND"; then
-  printf 'README contains obsolete identity outside the one-time migration command\n' >&2
   exit 1
 fi
 

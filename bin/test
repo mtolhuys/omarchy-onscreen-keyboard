@@ -6,6 +6,8 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 for script in \
   "$ROOT/tests/unit/models-test.js" \
+  "$ROOT/tests/unit/native-backend-test.sh" \
+  "$ROOT/tests/unit/system-integration-test.sh" \
   "$ROOT/tests/unit/source-contracts-test.sh" \
   "$ROOT/tests/unit/repository-hygiene-test.sh"; do
   if [[ ! -f "$script" ]]; then
@@ -15,6 +17,8 @@ for script in \
 done
 
 node "$ROOT/tests/unit/models-test.js"
+bash "$ROOT/tests/unit/native-backend-test.sh"
+bash "$ROOT/tests/unit/system-integration-test.sh"
 bash "$ROOT/tests/unit/source-contracts-test.sh"
 bash "$ROOT/tests/unit/repository-hygiene-test.sh"
 printf 'ok - portable on-screen keyboard suite passed\n'

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+source "$ROOT/bin/login-keyboard-lib.sh"
+
+force=false
+case ${1:-} in
+  "") ;;
+  --force) force=true ;;
+  -h|--help)
+    printf 'Usage: sudo %s [--force]\n' "$0"
+    exit 0
+    ;;
+  *) osk_fail "unknown install option: $1" || true; exit 64 ;;
+esac
+
+SYSTEM_ROOT=$(osk_system_root) || exit 64
+osk_require_privilege "$SYSTEM_ROOT" || exit 77
+osk_validate_sources
+osk_inspect "$SYSTEM_ROOT"
+
+if [[ $OSK_STATE == "modified" ]] && ! $force; then
+  osk_fail "existing integration is incomplete or modified; inspect it, then rerun with --force to replace owned files" || true
+  exit 3
+fi
+
+install -d -m 755 "$OSK_THEME_DIR" "$(dirname -- "$OSK_DROPIN")"
+
+install_atomic() {
+  local source=$1
+  local target=$2
+  local temporary
+  temporary=$(mktemp "$(dirname -- "$target")/.${target##*/}.tmp.XXXXXX")
+  install -m 644 "$source" "$temporary"
+  mv -f "$temporary" "$target"
+}
+
+for file in "${OSK_THEME_FILES[@]}"; do
+  install_atomic "$OSK_SOURCE_THEME/$file" "$OSK_THEME_DIR/$file"
+done
+install_atomic "$OSK_SOURCE_DROPIN" "$OSK_DROPIN"
+
+manifest_tmp=$(mktemp "$OSK_THEME_DIR/.integration-manifest.tmp.XXXXXX")
+{
+  printf 'schema=1\n'
+  printf 'version=%s\n' "$OSK_SOURCE_VERSION"
+  for file in "${OSK_THEME_FILES[@]}"; do
+    printf 'file.%s=%s\n' "$file" "$(osk_hash "$OSK_THEME_DIR/$file")"
+  done
+  printf 'dropin=%s\n' "$(osk_hash "$OSK_DROPIN")"
+} >"$manifest_tmp"
+chmod 644 "$manifest_tmp"
+mv -f "$manifest_tmp" "$OSK_INSTALLED_MANIFEST"
+
+printf 'Installed Omarchy login keyboard integration %s.\n' "$OSK_SOURCE_VERSION"
+printf 'It will be used after you reboot; SDDM was not restarted.\n'

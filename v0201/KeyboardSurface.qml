@@ -64,7 +64,7 @@ BorderSurface {
     spacing: root.rowGap
 
     Repeater {
-      model: root.layoutModel.rows.slice(0, 3)
+      model: root.layoutModel.rows.slice(0, 4)
 
       delegate: Row {
         id: keyRow
@@ -116,13 +116,13 @@ BorderSurface {
         spacing: root.rowGap
 
         Repeater {
-          model: root.layoutModel.rows.slice(3, 5)
+          model: root.layoutModel.rows.slice(4, 6)
 
           delegate: Row {
             id: lowerRow
             required property var modelData
             required property int index
-            readonly property int layoutIndex: index + 3
+            readonly property int layoutIndex: index + 4
             readonly property real insetFactor: Number(root.layoutModel.rowInsets[layoutIndex] || 0)
             width: typingDeck.width * (1 - insetFactor * 2)
             anchors.horizontalCenter: parent.horizontalCenter
@@ -167,40 +167,56 @@ BorderSurface {
         readonly property var keys: root.layoutModel.navigation.keys
 
         KeyboardKey {
+          id: upKeyButton
           x: navigationCluster.keyWidth + root.keyGap
           y: 0
           width: navigationCluster.keyWidth
           height: navigationCluster.keyHeight
           label: navigationCluster.keys[0].label
+          holdEnabled: (navigationCluster.keys[0].alternatives || []).length > 0
+          alternateHint: holdEnabled ? navigationCluster.keys[0].alternatives[0].label : ""
           enabled: true
           onActivated: root.controller.activateKey(navigationCluster.keys[0])
+          onHeld: root.openAlternatives(navigationCluster.keys[0], upKeyButton)
         }
         KeyboardKey {
+          id: leftKeyButton
           x: 0
           y: navigationCluster.keyHeight + root.rowGap
           width: navigationCluster.keyWidth
           height: navigationCluster.keyHeight
           label: navigationCluster.keys[1].label
+          holdEnabled: (navigationCluster.keys[1].alternatives || []).length > 0
+          alternateHint: holdEnabled ? navigationCluster.keys[1].alternatives[0].label : ""
           enabled: true
           onActivated: root.controller.activateKey(navigationCluster.keys[1])
+          onHeld: root.openAlternatives(navigationCluster.keys[1], leftKeyButton)
         }
         KeyboardKey {
+          id: downKeyButton
           x: navigationCluster.keyWidth + root.keyGap
           y: navigationCluster.keyHeight + root.rowGap
           width: navigationCluster.keyWidth
           height: navigationCluster.keyHeight
           label: navigationCluster.keys[2].label
+          holdEnabled: (navigationCluster.keys[2].alternatives || []).length > 0
+          alternateHint: holdEnabled ? navigationCluster.keys[2].alternatives[0].label : ""
           enabled: true
           onActivated: root.controller.activateKey(navigationCluster.keys[2])
+          onHeld: root.openAlternatives(navigationCluster.keys[2], downKeyButton)
         }
         KeyboardKey {
+          id: rightKeyButton
           x: (navigationCluster.keyWidth + root.keyGap) * 2
           y: navigationCluster.keyHeight + root.rowGap
           width: navigationCluster.keyWidth
           height: navigationCluster.keyHeight
           label: navigationCluster.keys[3].label
+          holdEnabled: (navigationCluster.keys[3].alternatives || []).length > 0
+          alternateHint: holdEnabled ? navigationCluster.keys[3].alternatives[0].label : ""
           enabled: true
           onActivated: root.controller.activateKey(navigationCluster.keys[3])
+          onHeld: root.openAlternatives(navigationCluster.keys[3], rightKeyButton)
         }
       }
     }

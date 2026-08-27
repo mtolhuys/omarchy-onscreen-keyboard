@@ -12,7 +12,7 @@ Item {
   property string moduleName: "dev.omarchy.onscreen-keyboard"
   property var settings: ({})
   property var controller: null
-  readonly property string runtimeBuild: "0.1.21"
+  readonly property string runtimeBuild: "0.2.1"
   readonly property bool keyboardVisible: controller && controller.keyboardVisible
   property color barForeground: Color.foreground
   property string barFontFamily: Style.font.family
@@ -32,8 +32,7 @@ Item {
   // this public target. Child MouseAreas are intentionally not reachable.
   function triggerPress(button) {
     if (!controller) return
-    if (button === Qt.RightButton) controller.cycleMode()
-    else if (button === Qt.LeftButton) controller.toggleTouchKeyboard()
+    if (button === Qt.LeftButton) controller.toggleKeyboard()
   }
 
   Rectangle {

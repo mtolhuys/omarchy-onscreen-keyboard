@@ -53,7 +53,8 @@ function keyWidth(value, id) {
 
 function alternativesFor(source, parentId, parentKind) {
   if (source === undefined) return []
-  if (parentKind !== "printable" || !Array.isArray(source) || source.length > 4)
+  if ((parentKind !== "printable" && parentKind !== "action")
+      || !Array.isArray(source) || source.length > 4)
     throw new Error("invalid alternatives for key: " + parentId)
 
   var seen = []
@@ -63,13 +64,13 @@ function alternativesFor(source, parentId, parentKind) {
     if (seen.indexOf(id) !== -1) throw new Error("duplicate alternative id: " + id)
     seen.push(id)
 
-    if (String(item.kind || "") !== "printable")
-      throw new Error("alternatives must be printable")
+    if (String(item.kind || "") !== parentKind)
+      throw new Error("alternatives must match their parent key kind")
 
     var label = requiredText(item.label, "invalid label for alternative: " + id)
     return {
       id: id,
-      kind: "printable",
+      kind: parentKind,
       label: label,
       shifted: label,
       width: 1,

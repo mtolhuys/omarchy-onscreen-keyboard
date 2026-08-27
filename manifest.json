@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "id": "dev.omarchy.onscreen-keyboard",
   "name": "Omarchy On-Screen Keyboard",
-  "version": "0.1.21",
+  "version": "0.2.1",
   "author": "Omarchy On-Screen Keyboard contributors",
   "description": "Touch-first on-screen keyboard for an unlocked Omarchy session.",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "v0121/Service.qml",
-    "barWidget": "v0121/BarWidget.qml"
+    "service": "v0201/Service.qml",
+    "barWidget": "v0201/BarWidget.qml"
   },
   "barWidget": {
     "displayName": "On-Screen Keyboard",
-    "description": "Show the keyboard and select automatic or manual visibility.",
+    "description": "Show or hide the on-screen keyboard.",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right"

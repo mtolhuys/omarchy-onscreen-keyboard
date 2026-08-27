@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..')
 const manifest = require(path.join(root, 'manifest.json'))
 const runtimeDir = path.dirname(manifest.entryPoints.service)
 const Detector = require(path.join(root, runtimeDir, 'models/HardwareKeyboardDetector.js'))
-const Policy = require(path.join(root, runtimeDir, 'models/KeyboardPolicy.js'))
+const Visibility = require(path.join(root, runtimeDir, 'models/KeyboardVisibility.js'))
 const Layout = require(path.join(root, runtimeDir, 'models/KeyboardLayout.js'))
 const Mapper = require(path.join(root, runtimeDir, 'models/KeyMapper.js'))
 const Dispatch = require(path.join(root, runtimeDir, 'models/KeyDispatch.js'))
@@ -124,99 +124,65 @@ test('Z13 keyboard inventory detects attach, detach, and external-keyboard recov
   assert.equal(Detector.fromDeviceInventory({ switches: [], keyboards: [] }), null)
 })
 
-test('policy starts safely unknown in auto mode', () => {
-  assert.deepEqual(Policy.create(), {
-    mode: 'auto',
+test('visibility starts hidden with an unknown hardware state', () => {
+  assert.deepEqual(Visibility.create(), {
     detector: { available: false, active: false, source: 'unknown', name: '' },
     visible: false
   })
-  assert.equal(Policy.keyboardEnabled(Policy.create()), false)
 })
 
-test('policy normalizes malformed external state without throwing', () => {
-  assert.equal(Policy.keyboardEnabled({ mode: 'auto' }), false)
-  assert.deepEqual(Policy.reduce({ mode: 'invalid', visible: true }, { type: 'unknown' }), Policy.create())
-  assert.equal(Policy.label({ mode: 'auto' }), 'AUTO · DETECTOR UNKNOWN')
+test('visibility normalizes malformed external state without throwing', () => {
+  assert.deepEqual(Visibility.reduce({ visible: 'yes' }, { type: 'unknown' }), Visibility.create())
 })
 
-test('auto follows valid detector state and ignores invalid transitions', () => {
-  let state = Policy.create()
-  state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: true, source: 'hyprland-switch', name: 'Tablet Mode' } })
-  assert.equal(Policy.keyboardEnabled(state), true)
+test('hardware transitions show on detach and hide on attach', () => {
+  let state = Visibility.create()
+  state = Visibility.reduce(state, { type: 'detector', detector: { available: true, active: true, source: 'hyprland-switch', name: 'Tablet Mode' } })
   assert.equal(state.visible, true)
-  const same = Policy.reduce(state, { type: 'mode', mode: 'sometimes' })
-  assert.deepEqual(same, state)
-  state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: false, source: 'hyprland-switch', name: 'Tablet Mode' } })
-  assert.equal(Policy.keyboardEnabled(state), false)
+  state = Visibility.reduce(state, { type: 'detector', detector: { available: true, active: false, source: 'hyprland-switch', name: 'Tablet Mode' } })
   assert.equal(state.visible, false)
 })
 
-test('forced on and off are deterministic and auto resumes detector truth', () => {
-  let state = Policy.reduce(Policy.create(), { type: 'mode', mode: 'on' })
-  assert.equal(Policy.keyboardEnabled(state), true)
+test('show hide and toggle directly control visibility', () => {
+  let state = Visibility.reduce(Visibility.create(), { type: 'show' })
   assert.equal(state.visible, true)
-  state = Policy.reduce(state, { type: 'mode', mode: 'off' })
-  assert.equal(Policy.keyboardEnabled(state), false)
+  state = Visibility.reduce(state, { type: 'toggle' })
   assert.equal(state.visible, false)
-  state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: true, source: 'hyprland-switch', name: 'Tablet Mode' } })
-  assert.equal(state.visible, false)
-  state = Policy.reduce(state, { type: 'mode', mode: 'auto' })
+  state = Visibility.reduce(state, { type: 'toggle' })
   assert.equal(state.visible, true)
+  state = Visibility.reduce(state, { type: 'hide' })
+  assert.equal(state.visible, false)
 })
 
-test('manual show hide and toggle remain available when detection is unknown', () => {
-  let state = Policy.reduce(Policy.create(), { type: 'show' })
-  assert.equal(state.mode, 'on')
-  assert.equal(state.visible, true)
-  state = Policy.reduce(state, { type: 'toggle' })
-  assert.equal(state.mode, 'off')
-  assert.equal(state.visible, false)
-  state = Policy.reduce(state, { type: 'toggle' })
-  assert.equal(state.mode, 'on')
-  assert.equal(state.visible, true)
-  state = Policy.reduce(state, { type: 'hide' })
-  assert.deepEqual({ mode: state.mode, visible: state.visible }, { mode: 'off', visible: false })
-})
-
-test('off can never be visible and on can never be hidden', () => {
-  const detector = { available: true, active: true, source: 'fixture', name: 'Tablet Mode' }
-  let state = Policy.reduce({ mode: 'off', detector, visible: true }, { type: 'detector', detector })
-  assert.deepEqual({ mode: state.mode, visible: state.visible }, { mode: 'off', visible: false })
-  state = Policy.reduce({ mode: 'on', detector, visible: false }, { type: 'detector', detector: { ...detector, active: false } })
-  assert.deepEqual({ mode: state.mode, visible: state.visible }, { mode: 'on', visible: true })
-})
-
-test('auto follows reattach while on remains forced', () => {
+test('manual visibility persists until the hardware state actually changes', () => {
   const detached = { available: true, active: true, source: 'fixture', name: 'Tablet Mode' }
   const attached = { ...detached, active: false }
-  let automatic = Policy.reduce(Policy.create(), { type: 'detector', detector: detached })
-  let forced = Policy.reduce(automatic, { type: 'mode', mode: 'on' })
-  automatic = Policy.reduce(automatic, { type: 'detector', detector: attached })
-  forced = Policy.reduce(forced, { type: 'detector', detector: attached })
-  assert.equal(automatic.visible, false)
-  assert.equal(forced.visible, true)
-})
-
-test('policy labels explain automatic and forced states', () => {
-  assert.equal(Policy.label(Policy.create()), 'AUTO · DETECTOR UNKNOWN')
-  assert.equal(Policy.label({ mode: 'auto', detector: { available: true, active: false }, visible: false }), 'AUTO · KEYBOARD ATTACHED')
-  assert.equal(Policy.label({ mode: 'auto', detector: { available: true, active: true }, visible: true }), 'AUTO · KEYBOARD DETACHED')
-  assert.equal(Policy.label({ mode: 'on', detector: {}, visible: true }), 'ON · FORCED')
-  assert.equal(Policy.label({ mode: 'off', detector: {}, visible: false }), 'OFF')
+  let state = Visibility.reduce(Visibility.create(), { type: 'detector', detector: detached })
+  state = Visibility.reduce(state, { type: 'hide' })
+  state = Visibility.reduce(state, { type: 'detector', detector: { ...detached, source: 'hyprland-devices', name: 'Asus WMI hotkeys' } })
+  assert.equal(state.visible, false)
+  state = Visibility.reduce(state, { type: 'detector', detector: attached })
+  assert.equal(state.visible, false)
+  state = Visibility.reduce(state, { type: 'show' })
+  state = Visibility.reduce(state, { type: 'detector', detector: attached })
+  assert.equal(state.visible, true)
+  state = Visibility.reduce(state, { type: 'detector', detector: detached })
+  assert.equal(state.visible, true)
 })
 
 test('US layout contains every supported key family', () => {
   const model = Layout.build(us)
   assert.equal(model.id, 'en-us')
-  assert(model.rows.length >= 5)
+  assert.equal(model.rows.length, 6)
   const ids = model.rows.flat().concat(model.navigation.keys).map(key => key.id)
   for (const id of [
     'a', 'z', 'shift', 'ctrl', 'alt', 'super', 'digit1', 'digit0', 'minus', 'equal', 'comma', 'period',
     'slash', 'semicolon', 'apostrophe', 'bracketleft', 'bracketright', 'backslash',
-    'space', 'backspace', 'enter', 'tab', 'escape', 'left', 'right', 'up', 'down'
+    'space', 'backspace', 'enter', 'tab', 'escape', 'left', 'right', 'up', 'down',
+    'f1', 'f6', 'f9', 'f12'
   ]) assert(ids.includes(id), `missing ${id}`)
   assert.equal(new Set(ids).size, ids.length)
-  assert.deepEqual(model.rowInsets, [0, 0.025, 0.05, 0.025, 0.08])
+  assert.deepEqual(model.rowInsets, [0.015, 0, 0.025, 0.05, 0.025, 0.08])
   assert.equal(model.rows.flat().find(key => key.id === 'super').fontFamily, 'omarchy')
 })
 
@@ -236,6 +202,19 @@ test('layout-owned long-press alternatives expose developer symbols without chan
     assert(keys.get(id).alternatives.every(key => key.kind === 'printable'))
   }
   assert.equal(keys.get('a').alternatives.length, 0)
+})
+
+test('action long presses expose navigation and editing keys without crowding the grid', () => {
+  const model = Layout.build(us)
+  const keys = new Map(model.rows.flat().concat(model.navigation.keys).map(key => [key.id, key]))
+  const expected = {
+    backspace: ['delete'], tab: ['insert'], up: ['pageup'], down: ['pagedown'],
+    left: ['home'], right: ['end']
+  }
+  for (const [id, alternatives] of Object.entries(expected)) {
+    assert.deepEqual(keys.get(id).alternatives.map(key => key.id), alternatives, `${id} alternatives`)
+    assert(keys.get(id).alternatives.every(key => key.kind === 'action'))
+  }
 })
 
 test('layout rejects malformed or unsafe long-press alternatives', () => {
@@ -419,41 +398,42 @@ test('one-shot modifiers apply to actions, toggle off, and cancel atomically', (
   assert.deepEqual(Layout.cancel(state), Layout.createState())
 })
 
-test('strict mapper uses a named Space and argv-only modifier chords', () => {
-  assert.deepEqual(Mapper.commandFor({ id: 'a', modifiers: [] }), ['wtype', 'a'])
-  assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: [] }), ['wtype', '-k', 'space'])
-  assert.deepEqual(Mapper.commandFor({ id: 'a', modifiers: ['shift'] }),
-    ['wtype', '-M', 'shift', 'A', '-m', 'shift'])
+test('strict mapper emits fixed evdev keycodes and modifier masks', () => {
+  assert.deepEqual(Mapper.commandFor({ id: 'a', modifiers: [] }), ['osk-input', '0', '30'])
+  assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: [] }), ['osk-input', '0', '57'])
+  assert.deepEqual(Mapper.commandFor({ id: 'a', modifiers: ['shift'] }), ['osk-input', '1', '30'])
   assert.deepEqual(Mapper.commandFor({ id: 'a', modifiers: ['ctrl', 'alt', 'shift', 'super'] }),
-    ['wtype', '-M', 'ctrl', '-M', 'alt', '-M', 'shift', '-M', 'logo', 'A',
-      '-m', 'logo', '-m', 'shift', '-m', 'alt', '-m', 'ctrl'])
-  assert.deepEqual(Mapper.commandFor({ id: 'tab', modifiers: ['alt'] }),
-    ['hyprctl', 'dispatch', 'hl.dsp.window.cycle_next()'])
+    ['osk-input', '77', '30'])
+  assert.deepEqual(Mapper.commandFor({ id: 'tab', modifiers: ['alt'] }), ['osk-input', '8', '15'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['alt', 'super'] }),
-    ['omarchy-menu', 'toggle', 'apps'])
+    ['osk-input', '72', '57'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['shift', 'super'] }),
-    ['omarchy-toggle-bar'])
+    ['osk-input', '65', '57'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['ctrl', 'super'] }),
-    ['omarchy-menu', 'toggle', 'background'])
+    ['osk-input', '68', '57'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['ctrl', 'shift', 'super'] }),
-    ['omarchy-menu', 'toggle', 'theme'])
+    ['osk-input', '69', '57'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['super'] }),
-    ['omarchy-menu', 'toggle'])
-  assert.deepEqual(Mapper.commandFor({ id: 'backspace', modifiers: [] }), ['wtype', '-k', 'BackSpace'])
-  assert.deepEqual(Mapper.commandFor({ id: 'left', modifiers: [] }), ['wtype', '-k', 'Left'])
+    ['osk-input', '64', '57'])
+  assert.deepEqual(Mapper.commandFor({ id: 'digit3', modifiers: ['super'] }),
+    ['osk-input', '64', '4'])
+  assert.deepEqual(Mapper.commandFor({ id: 'backspace', modifiers: [] }), ['osk-input', '0', '14'])
+  assert.deepEqual(Mapper.commandFor({ id: 'left', modifiers: [] }), ['osk-input', '0', '105'])
 })
 
 test('developer alternatives have closed fixed argv mappings and support one-shot chords', () => {
   const expected = {
-    exclamation: '!', at: '@', hash: '#', dollar: '$', percent: '%', caret: '^',
-    ampersand: '&', asterisk: '*', parenleft: '(', parenright: ')', underscore: '_', plus: '+',
-    braceleft: '{', braceright: '}', bar: '|', colon: ':', doublequote: '"', less: '<',
-    greater: '>', question: '?', tilde: '~'
+    exclamation: 2, at: 3, hash: 4, dollar: 5, percent: 6, caret: 7,
+    ampersand: 8, asterisk: 9, parenleft: 10, parenright: 11, underscore: 12, plus: 13,
+    braceleft: 26, braceright: 27, bar: 43, colon: 39, doublequote: 40, less: 51,
+    greater: 52, question: 53, tilde: 41
   }
-  for (const [id, symbol] of Object.entries(expected))
-    assert.deepEqual(Mapper.commandFor({ id, modifiers: [] }), ['wtype', symbol], id)
+  for (const [id, keycode] of Object.entries(expected))
+    assert.deepEqual(Mapper.commandFor({ id, modifiers: [] }), ['osk-input', '1', String(keycode)], id)
   assert.deepEqual(Mapper.commandFor({ id: 'underscore', modifiers: ['ctrl'] }),
-    ['wtype', '-M', 'ctrl', '_', '-m', 'ctrl'])
+    ['osk-input', '5', '12'])
+  assert.deepEqual(Mapper.commandFor({ id: 'f12', modifiers: ['super'] }),
+    ['osk-input', '64', '88'])
 })
 
 test('strict mapper refuses unknown ids, modifiers, duplicates, and malformed actions', () => {
@@ -475,7 +455,7 @@ test('every layout action crosses both closed input boundaries', () => {
   const layout = Layout.build(us)
   const keys = layout.rows.flat()
     .flatMap(key => [key, ...key.alternatives])
-    .concat(layout.navigation.keys)
+    .concat(layout.navigation.keys.flatMap(key => [key, ...key.alternatives]))
     .filter(key => key.kind !== 'modifier')
   const modifierSets = [[], ['ctrl'], ['alt'], ['shift'], ['super'], ['ctrl', 'alt', 'shift', 'super']]
 
@@ -490,9 +470,9 @@ test('every layout action crosses both closed input boundaries', () => {
 })
 
 test('dispatch serializes a rapid burst without dropping or combining actions', () => {
-  const a = ['wtype', 'a']
-  const space = ['wtype', '-k', 'space']
-  const backspace = ['wtype', '-k', 'BackSpace']
+  const a = ['osk-input', '0', '30']
+  const space = ['osk-input', '0', '57']
+  const backspace = ['osk-input', '0', '14']
   let state = Dispatch.create()
   let result = Dispatch.enqueue(state, a)
   state = result.state
@@ -512,50 +492,43 @@ test('dispatch serializes a rapid burst without dropping or combining actions', 
   assert.deepEqual(result.state, Dispatch.create())
 })
 
-test('dispatch accepts only the closed compositor shortcut commands', () => {
-  const allowed = [
+test('dispatch rejects direct compositor commands so Hyprland resolves virtual chords', () => {
+  for (const command of [
     ['hyprctl', 'dispatch', 'hl.dsp.window.cycle_next()'],
     ['omarchy-menu', 'toggle'],
-    ['omarchy-menu', 'toggle', 'apps'],
     ['omarchy-toggle-bar'],
-    ['omarchy-menu', 'toggle', 'background'],
-    ['omarchy-menu', 'toggle', 'theme']
-  ]
-  for (const command of allowed)
-    assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, true)
-  for (const command of [
     ['hyprctl', 'dispatch', 'exec', 'touch /tmp/no'],
     ['omarchy-menu', 'toggle', 'system'],
     ['sh', '-c', 'true']
   ]) assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, false)
 })
 
-test('dispatch accepts only complete closed wtype argument vectors', () => {
+test('dispatch accepts only complete closed evdev argument vectors', () => {
   const allowed = [
-    ['wtype', 'a'],
-    ['wtype', '-k', 'space'],
-    ['wtype', '-M', 'ctrl', '-M', 'shift', 'A', '-m', 'shift', '-m', 'ctrl'],
-    ['wtype', '-M', 'logo', '-k', 'Left', '-m', 'logo']
+    ['osk-input', '0', '30'],
+    ['osk-input', '0', '57'],
+    ['osk-input', '5', '30'],
+    ['osk-input', '64', '105'],
+    ['osk-input', '0', '88']
   ]
   for (const command of allowed)
     assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, true)
 
   const rejected = [
-    ['wtype', 'multiple characters'],
-    ['wtype', '-k', 'F12'],
-    ['wtype', '-s', '1000', 'a'],
-    ['wtype', '-M', 'ctrl', 'a'],
-    ['wtype', '-M', 'ctrl', 'a', '-m', 'alt'],
-    ['wtype', '-M', 'shift', '-M', 'ctrl', 'A', '-m', 'ctrl', '-m', 'shift'],
-    ['wtype', '-M', 'ctrl', '-M', 'ctrl', 'a', '-m', 'ctrl', '-m', 'ctrl']
+    ['osk-input', '0'],
+    ['osk-input', '78', '30'],
+    ['osk-input', '4', '29'],
+    ['osk-input', '-1', '30'],
+    ['osk-input', '4', '999'],
+    ['wtype', '-M', 'ctrl', '-k', 'a', '-m', 'ctrl']
   ]
   for (const command of rejected)
     assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, false)
 })
 
 test('backend failure and cancellation discard pending actions and held UI state', () => {
-  let state = Dispatch.enqueue(Dispatch.create(), ['wtype', '-M', 'ctrl', 'a', '-m', 'ctrl']).state
-  state = Dispatch.enqueue(state, ['wtype', '-k', 'space']).state
+  let state = Dispatch.enqueue(Dispatch.create(), ['osk-input', '4', '30']).state
+  state = Dispatch.enqueue(state, ['osk-input', '0', '57']).state
   const failed = Dispatch.complete(state, 1)
   assert.equal(failed.start, null)
   assert.deepEqual(failed.state, { active: null, pending: [], status: 'backend-error' })

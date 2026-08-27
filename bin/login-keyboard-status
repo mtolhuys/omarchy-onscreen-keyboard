@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+source "$ROOT/bin/login-keyboard-lib.sh"
+
+json=false
+case ${1:-} in
+  "") ;;
+  --json) json=true ;;
+  -h|--help)
+    printf 'Usage: %s [--json]\n' "$(basename "$0")"
+    exit 0
+    ;;
+  *) osk_fail "unknown status option: $1" || true; exit 64 ;;
+esac
+
+SYSTEM_ROOT=$(osk_system_root) || exit 64
+osk_validate_sources || exit 4
+osk_inspect "$SYSTEM_ROOT"
+
+if $json; then
+  jq -cn --arg state "$OSK_STATE" --arg installedVersion "$OSK_INSTALLED_VERSION" \
+    --arg sourceVersion "$OSK_SOURCE_VERSION" \
+    '{state: $state, installedVersion: $installedVersion, sourceVersion: $sourceVersion}'
+else
+  case $OSK_STATE in
+    current) printf 'Login keyboard integration is installed and current (%s).\n' "$OSK_SOURCE_VERSION" ;;
+    not-installed) printf 'Login keyboard integration is not installed.\n' ;;
+    outdated) printf 'Login keyboard integration is outdated (installed %s, available %s).\n' "$OSK_INSTALLED_VERSION" "$OSK_SOURCE_VERSION" ;;
+    modified) printf 'Login keyboard integration is incomplete or locally modified.\n' ;;
+  esac
+fi
+
+case $OSK_STATE in
+  current) exit 0 ;;
+  not-installed) exit 1 ;;
+  outdated) exit 2 ;;
+  modified) exit 3 ;;
+esac

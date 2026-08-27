@@ -1,8 +1,22 @@
 {
   "id": "en-us",
-  "rowInsets": [0, 0.025, 0.05, 0.025, 0.08],
+  "rowInsets": [0.015, 0, 0.025, 0.05, 0.025, 0.08],
   "name": "English (US)",
   "rows": [
+    [
+      { "id": "f1", "kind": "action", "label": "F1" },
+      { "id": "f2", "kind": "action", "label": "F2" },
+      { "id": "f3", "kind": "action", "label": "F3" },
+      { "id": "f4", "kind": "action", "label": "F4" },
+      { "id": "f5", "kind": "action", "label": "F5" },
+      { "id": "f6", "kind": "action", "label": "F6" },
+      { "id": "f7", "kind": "action", "label": "F7" },
+      { "id": "f8", "kind": "action", "label": "F8" },
+      { "id": "f9", "kind": "action", "label": "F9" },
+      { "id": "f10", "kind": "action", "label": "F10" },
+      { "id": "f11", "kind": "action", "label": "F11" },
+      { "id": "f12", "kind": "action", "label": "F12" }
+    ],
     [
       { "id": "escape", "kind": "action", "label": "Esc", "width": 1.25 },
       { "id": "digit1", "kind": "printable", "label": "1", "shifted": "!", "alternatives": [{ "id": "exclamation", "kind": "printable", "label": "!" }] },
@@ -17,10 +31,10 @@
       { "id": "digit0", "kind": "printable", "label": "0", "shifted": ")", "alternatives": [{ "id": "parenright", "kind": "printable", "label": ")" }] },
       { "id": "minus", "kind": "printable", "label": "-", "shifted": "_", "alternatives": [{ "id": "underscore", "kind": "printable", "label": "_" }] },
       { "id": "equal", "kind": "printable", "label": "=", "shifted": "+", "alternatives": [{ "id": "plus", "kind": "printable", "label": "+" }] },
-      { "id": "backspace", "kind": "action", "label": "⌫", "width": 1.7 }
+      { "id": "backspace", "kind": "action", "label": "⌫", "width": 1.7, "alternatives": [{ "id": "delete", "kind": "action", "label": "Del" }] }
     ],
     [
-      { "id": "tab", "kind": "action", "label": "Tab", "width": 1.5 },
+      { "id": "tab", "kind": "action", "label": "Tab", "width": 1.5, "alternatives": [{ "id": "insert", "kind": "action", "label": "Ins" }] },
       { "id": "q", "kind": "printable", "label": "q", "shifted": "Q" },
       { "id": "w", "kind": "printable", "label": "w", "shifted": "W" },
       { "id": "e", "kind": "printable", "label": "e", "shifted": "E" },
@@ -73,10 +87,10 @@
   "navigation": {
     "type": "inverted-t",
     "keys": [
-      { "id": "up", "kind": "action", "label": "↑" },
-      { "id": "left", "kind": "action", "label": "←" },
-      { "id": "down", "kind": "action", "label": "↓" },
-      { "id": "right", "kind": "action", "label": "→" }
+      { "id": "up", "kind": "action", "label": "↑", "alternatives": [{ "id": "pageup", "kind": "action", "label": "PgUp" }] },
+      { "id": "left", "kind": "action", "label": "←", "alternatives": [{ "id": "home", "kind": "action", "label": "Home" }] },
+      { "id": "down", "kind": "action", "label": "↓", "alternatives": [{ "id": "pagedown", "kind": "action", "label": "PgDn" }] },
+      { "id": "right", "kind": "action", "label": "→", "alternatives": [{ "id": "end", "kind": "action", "label": "End" }] }
     ]
   }
 }
