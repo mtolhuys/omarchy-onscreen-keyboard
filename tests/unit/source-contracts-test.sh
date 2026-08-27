@@ -148,6 +148,7 @@ README="$ROOT/README.md"
 grep -Fq 'omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable' "$README"
 grep -Fq 'omarchy plugin update dev.omarchy.onscreen-keyboard' "$README"
 grep -Fq 'omarchy plugin remove dev.omarchy.onscreen-keyboard' "$README"
+grep -Fq '## Migrating from 0.1.20' "$README"
 reject_grep -Fq '<path-to-this-repo>' "$README"
 reject_grep -Eq '/home/|test-runs/' "$README"
 printf 'ok - README uses public lifecycle commands and portable test instructions\n'

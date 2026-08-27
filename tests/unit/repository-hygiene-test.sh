@@ -4,6 +4,9 @@ set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 SELF=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")
+README="$ROOT/README.md"
+OLD_ID='dev.omarchy.tablet-mode'
+MIGRATION_COMMAND="omarchy plugin remove $OLD_ID"
 
 if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
     xargs -0 grep -nHE \
@@ -12,10 +15,17 @@ if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
   exit 1
 fi
 
-if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
+if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" ! -path "$README" -print0 |
     xargs -0 grep -nHE \
       '(omarchy[-]tablet[-]mode|dev[.]omarchy[.]tablet[-]mode|omarchy-shell tablet[-]mode|omarchy[-]tablet[-]keyboard|TabletDetector|TabletPolicy|tabletActive|TABLET_PLUGIN_)'; then
   printf 'obsolete product identity found in the public checkout\n' >&2
+  exit 1
+fi
+
+if [[ $(grep -Fxc "$MIGRATION_COMMAND" "$README") -ne 1 ]] ||
+    grep -nE '(omarchy[-]tablet[-]mode|dev[.]omarchy[.]tablet[-]mode|omarchy-shell tablet[-]mode|omarchy[-]tablet[-]keyboard)' "$README" |
+      grep -Fv "$MIGRATION_COMMAND"; then
+  printf 'README contains obsolete identity outside the one-time migration command\n' >&2
   exit 1
 fi
 

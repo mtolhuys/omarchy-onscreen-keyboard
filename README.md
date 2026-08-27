@@ -15,6 +15,17 @@ omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --e
 
 The keyboard icon is placed in the right side of the bar by default.
 
+## Migrating from 0.1.20
+
+The rebrand changes the plugin identity, so an installation from before the rename must be replaced once:
+
+```bash
+omarchy plugin remove dev.omarchy.tablet-mode
+omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable
+```
+
+After that one-time migration, use the normal Update command below.
+
 ## Use
 
 Tap or left-click the keyboard icon to show or hide the keyboard. The icon is bright while the keyboard is visible and dim while it is hidden.
