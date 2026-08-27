@@ -1,5 +1,7 @@
 # Omarchy On-Screen Keyboard
 
+![Omarchy lock-screen and desktop on-screen keyboards](assets/omarchy-onscreen-keyboard-banner.webp)
+
 A touch-first keyboard for Omarchy's desktop, with an optional login-screen integration. Open it from the bar, type into the application that already has focus, and use normal application and Omarchy shortcuts without reaching for a physical keyboard.
 
 ## Install
