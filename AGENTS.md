@@ -17,7 +17,7 @@ Read `README.md`, `SECURITY.md`, and `docs/ARCHITECTURE.md` completely. Verify p
 ## Runtime invariants
 
 - Keep plugin entry points as `Item`s loaded by the existing `omarchy-shell` process.
-- Keep tablet detection behind the `auto`, `on`, and `off` policy adapter.
+- Keep hardware-keyboard detection behind the `auto`, `on`, and `off` policy adapter.
 - Keep layouts declarative and keyboard state in pure JavaScript where practical.
 - Send only closed semantic key actions. Never use shell evaluation, clipboard transport, completed-string buffering, history, or key logging.
 - The keyboard must not take focus from the target application.

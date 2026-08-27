@@ -8,8 +8,8 @@ const path = require('node:path')
 const root = path.resolve(__dirname, '../..')
 const manifest = require(path.join(root, 'manifest.json'))
 const runtimeDir = path.dirname(manifest.entryPoints.service)
-const Detector = require(path.join(root, runtimeDir, 'models/TabletDetector.js'))
-const Policy = require(path.join(root, runtimeDir, 'models/TabletPolicy.js'))
+const Detector = require(path.join(root, runtimeDir, 'models/HardwareKeyboardDetector.js'))
+const Policy = require(path.join(root, runtimeDir, 'models/KeyboardPolicy.js'))
 const Layout = require(path.join(root, runtimeDir, 'models/KeyboardLayout.js'))
 const Mapper = require(path.join(root, runtimeDir, 'models/KeyMapper.js'))
 const Dispatch = require(path.join(root, runtimeDir, 'models/KeyDispatch.js'))
@@ -62,6 +62,17 @@ test('switch parser accepts the raw-data fallback and commas in names', () => {
   })
 })
 
+test('switch parser ignores malformed parse results and falls back to raw data', () => {
+  for (const parsed of ['on', { 0: 'on', 1: 'Tablet Mode', length: 2 }]) {
+    assert.deepEqual(Detector.parseSwitchEvent(rawSwitch('on,Tablet Mode', parsed)), {
+      available: true,
+      active: true,
+      source: 'hyprland-switch',
+      name: 'Tablet Mode'
+    })
+  }
+})
+
 test('switch parser rejects unrelated and malformed events', () => {
   const rejected = [
     null,
@@ -75,12 +86,12 @@ test('switch parser rejects unrelated and malformed events', () => {
   for (const event of rejected) assert.equal(Detector.parseSwitchEvent(event), null)
 })
 
-test('tablet switch matching is generic while retaining the ASUS fixture', () => {
-  assert.equal(Detector.isTabletSwitchName('Tablet Mode'), true)
-  assert.equal(Detector.isTabletSwitchName('Convertible tablet switch'), true)
-  assert.equal(Detector.isTabletSwitchName('Keyboard Folded'), true)
-  assert.equal(Detector.isTabletSwitchName('Asus WMI hotkeys'), true)
-  assert.equal(Detector.isTabletSwitchName('Lid Switch'), false)
+test('convertible switch matching is generic while retaining the ASUS fixture', () => {
+  assert.equal(Detector.isConvertibleSwitchName('Tablet Mode'), true)
+  assert.equal(Detector.isConvertibleSwitchName('Convertible tablet switch'), true)
+  assert.equal(Detector.isConvertibleSwitchName('Keyboard Folded'), true)
+  assert.equal(Detector.isConvertibleSwitchName('Asus WMI hotkeys'), true)
+  assert.equal(Detector.isConvertibleSwitchName('Lid Switch'), false)
 })
 
 test('Z13 keyboard inventory detects attach, detach, and external-keyboard recovery', () => {
@@ -119,27 +130,33 @@ test('policy starts safely unknown in auto mode', () => {
     detector: { available: false, active: false, source: 'unknown', name: '' },
     visible: false
   })
-  assert.equal(Policy.tabletActive(Policy.create()), false)
+  assert.equal(Policy.keyboardEnabled(Policy.create()), false)
+})
+
+test('policy normalizes malformed external state without throwing', () => {
+  assert.equal(Policy.keyboardEnabled({ mode: 'auto' }), false)
+  assert.deepEqual(Policy.reduce({ mode: 'invalid', visible: true }, { type: 'unknown' }), Policy.create())
+  assert.equal(Policy.label({ mode: 'auto' }), 'AUTO · DETECTOR UNKNOWN')
 })
 
 test('auto follows valid detector state and ignores invalid transitions', () => {
   let state = Policy.create()
   state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: true, source: 'hyprland-switch', name: 'Tablet Mode' } })
-  assert.equal(Policy.tabletActive(state), true)
+  assert.equal(Policy.keyboardEnabled(state), true)
   assert.equal(state.visible, true)
   const same = Policy.reduce(state, { type: 'mode', mode: 'sometimes' })
   assert.deepEqual(same, state)
   state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: false, source: 'hyprland-switch', name: 'Tablet Mode' } })
-  assert.equal(Policy.tabletActive(state), false)
+  assert.equal(Policy.keyboardEnabled(state), false)
   assert.equal(state.visible, false)
 })
 
 test('forced on and off are deterministic and auto resumes detector truth', () => {
   let state = Policy.reduce(Policy.create(), { type: 'mode', mode: 'on' })
-  assert.equal(Policy.tabletActive(state), true)
+  assert.equal(Policy.keyboardEnabled(state), true)
   assert.equal(state.visible, true)
   state = Policy.reduce(state, { type: 'mode', mode: 'off' })
-  assert.equal(Policy.tabletActive(state), false)
+  assert.equal(Policy.keyboardEnabled(state), false)
   assert.equal(state.visible, false)
   state = Policy.reduce(state, { type: 'detector', detector: { available: true, active: true, source: 'hyprland-switch', name: 'Tablet Mode' } })
   assert.equal(state.visible, false)
@@ -200,6 +217,7 @@ test('US layout contains every supported key family', () => {
   ]) assert(ids.includes(id), `missing ${id}`)
   assert.equal(new Set(ids).size, ids.length)
   assert.deepEqual(model.rowInsets, [0, 0.025, 0.05, 0.025, 0.08])
+  assert.equal(model.rows.flat().find(key => key.id === 'super').fontFamily, 'omarchy')
 })
 
 test('layout-owned long-press alternatives expose developer symbols without changing the primary grid', () => {
@@ -237,6 +255,40 @@ test('layout rejects malformed or unsafe long-press alternatives', () => {
       { id: 'three', kind: 'printable', label: '3' }, { id: 'four', kind: 'printable', label: '4' },
       { id: 'five', kind: 'printable', label: '5' }]
   ]) assert.throws(() => Layout.build({ ...base, rows: [[{ ...base.rows[0][0], alternatives }]] }))
+  assert.throws(() => Layout.build({
+    ...base,
+    rows: [[{
+      id: 'enter', kind: 'action', label: 'Enter',
+      alternatives: [{ id: 'exclamation', kind: 'printable', label: '!' }]
+    }]]
+  }))
+})
+
+test('layout rejects malformed rows and non-finite key widths', () => {
+  const navigation = {
+    type: 'inverted-t',
+    keys: [
+      { id: 'up', kind: 'action', label: 'up' },
+      { id: 'left', kind: 'action', label: 'left' },
+      { id: 'down', kind: 'action', label: 'down' },
+      { id: 'right', kind: 'action', label: 'right' }
+    ]
+  }
+
+  assert.throws(() => Layout.build({ rows: [[{ id: 'a', kind: 'printable', label: 'a' }]], navigation }))
+  assert.throws(() => Layout.build({ id: 'fixture', rows: [], navigation }))
+  assert.throws(() => Layout.build({ id: 'fixture', rows: [null], navigation }))
+  assert.throws(() => Layout.build({ id: 'fixture', rows: [[]], navigation }))
+  assert.throws(() => Layout.build({
+    id: 'fixture', rows: [[{ id: 'a', kind: 'printable', label: '' }]], navigation
+  }))
+  for (const width of [NaN, Infinity, -Infinity, 'wide']) {
+    assert.throws(() => Layout.build({
+      id: 'fixture',
+      rows: [[{ id: 'a', kind: 'printable', label: 'a', width }]],
+      navigation
+    }))
+  }
 })
 
 test('arrow keys are a closed inverted-T cluster outside the typing rows', () => {
@@ -282,6 +334,9 @@ test('tiled seam correction closes only a plausible measured remainder', () => {
   assert.equal(Avoidance.tiledSeamCorrection({
     address: '0x1', floating: false, fullscreen: 0, at: [10, 30], size: [1260, 200]
   }, monitor, 480, 2, 96), 0)
+  assert.equal(Avoidance.tiledSeamCorrection({
+    address: '0x1', floating: false, fullscreen: 0, at: [10, 30], size: [1260, 428]
+  }, { x: 0, y: 800, width: 1280, height: 800 }, 480, 2, 96), 0)
 })
 
 test('window avoidance leaves tiled clients to the exclusive zone', () => {
@@ -312,6 +367,27 @@ test('window avoidance exits fullscreen reversibly instead of covering it', () =
   }, { x: 0, y: 0, width: 1280, height: 800 }, 520), {
     action: 'unfullscreen', address: '0x4',
     restore: { x: 0, y: 0, width: 1280, height: 800, fullscreen: 1 }
+  })
+})
+
+test('window avoidance rejects a keyboard edge outside the target monitor', () => {
+  assert.deepEqual(Avoidance.plan({
+    address: '0x5', floating: true, fullscreen: 0, at: [100, 200], size: [900, 500]
+  }, { x: 0, y: 0, width: 1280, height: 800 }, -10), {
+    action: 'none', reason: 'invalid-geometry'
+  })
+  assert.deepEqual(Avoidance.plan({
+    address: '0x5', floating: true, fullscreen: 0, at: [100, 200], size: [900, 500]
+  }, { x: 0, y: 0, width: 1280, height: 800 }, 900), {
+    action: 'none', reason: 'invalid-geometry'
+  })
+})
+
+test('window avoidance refuses a fit when no safe client area remains', () => {
+  assert.deepEqual(Avoidance.plan({
+    address: '0x6', floating: true, fullscreen: 0, at: [20, 20], size: [500, 500]
+  }, { x: 0, y: 0, width: 1280, height: 800 }, 100), {
+    action: 'none', reason: 'insufficient-space'
   })
 })
 
@@ -353,6 +429,12 @@ test('strict mapper uses a named Space and argv-only modifier chords', () => {
       '-m', 'logo', '-m', 'shift', '-m', 'alt', '-m', 'ctrl'])
   assert.deepEqual(Mapper.commandFor({ id: 'tab', modifiers: ['alt'] }),
     ['hyprctl', 'dispatch', 'hl.dsp.window.cycle_next()'])
+  assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['alt', 'super'] }),
+    ['omarchy-menu', 'toggle', 'apps'])
+  assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['shift', 'super'] }),
+    ['omarchy-toggle-bar'])
+  assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['ctrl', 'super'] }),
+    ['omarchy-menu', 'toggle', 'background'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['ctrl', 'shift', 'super'] }),
     ['omarchy-menu', 'toggle', 'theme'])
   assert.deepEqual(Mapper.commandFor({ id: 'space', modifiers: ['super'] }),
@@ -389,6 +471,24 @@ test('strict mapper refuses unknown ids, modifiers, duplicates, and malformed ac
   ]) assert.equal(Mapper.commandFor(action), null)
 })
 
+test('every layout action crosses both closed input boundaries', () => {
+  const layout = Layout.build(us)
+  const keys = layout.rows.flat()
+    .flatMap(key => [key, ...key.alternatives])
+    .concat(layout.navigation.keys)
+    .filter(key => key.kind !== 'modifier')
+  const modifierSets = [[], ['ctrl'], ['alt'], ['shift'], ['super'], ['ctrl', 'alt', 'shift', 'super']]
+
+  for (const key of keys) {
+    for (const modifiers of modifierSets) {
+      const command = Mapper.commandFor({ id: key.id, modifiers })
+      assert(command, `${key.id} with ${modifiers.join('+') || 'no modifiers'} must map`)
+      assert.equal(Dispatch.enqueue(Dispatch.create(), command, 1).accepted, true,
+        `${key.id} with ${modifiers.join('+') || 'no modifiers'} must dispatch`)
+    }
+  }
+})
+
 test('dispatch serializes a rapid burst without dropping or combining actions', () => {
   const a = ['wtype', 'a']
   const space = ['wtype', '-k', 'space']
@@ -416,15 +516,41 @@ test('dispatch accepts only the closed compositor shortcut commands', () => {
   const allowed = [
     ['hyprctl', 'dispatch', 'hl.dsp.window.cycle_next()'],
     ['omarchy-menu', 'toggle'],
+    ['omarchy-menu', 'toggle', 'apps'],
+    ['omarchy-toggle-bar'],
+    ['omarchy-menu', 'toggle', 'background'],
     ['omarchy-menu', 'toggle', 'theme']
   ]
   for (const command of allowed)
     assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, true)
   for (const command of [
     ['hyprctl', 'dispatch', 'exec', 'touch /tmp/no'],
-    ['omarchy-menu', 'toggle', 'apps'],
+    ['omarchy-menu', 'toggle', 'system'],
     ['sh', '-c', 'true']
   ]) assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, false)
+})
+
+test('dispatch accepts only complete closed wtype argument vectors', () => {
+  const allowed = [
+    ['wtype', 'a'],
+    ['wtype', '-k', 'space'],
+    ['wtype', '-M', 'ctrl', '-M', 'shift', 'A', '-m', 'shift', '-m', 'ctrl'],
+    ['wtype', '-M', 'logo', '-k', 'Left', '-m', 'logo']
+  ]
+  for (const command of allowed)
+    assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, true)
+
+  const rejected = [
+    ['wtype', 'multiple characters'],
+    ['wtype', '-k', 'F12'],
+    ['wtype', '-s', '1000', 'a'],
+    ['wtype', '-M', 'ctrl', 'a'],
+    ['wtype', '-M', 'ctrl', 'a', '-m', 'alt'],
+    ['wtype', '-M', 'shift', '-M', 'ctrl', 'A', '-m', 'ctrl', '-m', 'shift'],
+    ['wtype', '-M', 'ctrl', '-M', 'ctrl', 'a', '-m', 'ctrl', '-m', 'ctrl']
+  ]
+  for (const command of rejected)
+    assert.equal(Dispatch.enqueue(Dispatch.create(), command, 4).accepted, false)
 })
 
 test('backend failure and cancellation discard pending actions and held UI state', () => {
@@ -439,5 +565,5 @@ test('backend failure and cancellation discard pending actions and held UI state
 })
 
 process.on('exit', () => {
-  if (!process.exitCode) process.stdout.write('ok - all tablet mode model contracts passed\n')
+  if (!process.exitCode) process.stdout.write('ok - all on-screen keyboard model contracts passed\n')
 })

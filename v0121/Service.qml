@@ -4,8 +4,8 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
-import "models/TabletDetector.js" as TabletDetector
-import "models/TabletPolicy.js" as TabletPolicy
+import "models/HardwareKeyboardDetector.js" as HardwareKeyboardDetector
+import "models/KeyboardPolicy.js" as KeyboardPolicy
 import "models/KeyboardLayout.js" as KeyboardLayout
 import "models/KeyMapper.js" as KeyMapper
 import "models/KeyDispatch.js" as KeyDispatch
@@ -17,9 +17,9 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string runtimeBuild: "0.1.20"
+  readonly property string runtimeBuild: "0.1.21"
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
-  property var policy: TabletPolicy.create()
+  property var policy: KeyboardPolicy.create()
   property var keyboardState: KeyboardLayout.createState()
   property var keyboardLayout: ({ id: "", rows: [] })
   property var keyDispatch: KeyDispatch.create()
@@ -35,8 +35,8 @@ Item {
   property bool alternativesVisible: false
 
   readonly property bool keyboardVisible: policy.visible === true
-  readonly property bool tabletActive: TabletPolicy.tabletActive(policy)
-  readonly property string policyLabel: TabletPolicy.label(policy)
+  readonly property bool keyboardEnabled: KeyboardPolicy.keyboardEnabled(policy)
+  readonly property string policyLabel: KeyboardPolicy.label(policy)
   readonly property bool shiftActive: KeyboardLayout.modifierActive(keyboardState, "shift")
   readonly property bool backendBusy: keyDispatch.active !== null
   readonly property int bottomOuterGap: detectedBottomOuterGap >= 0
@@ -71,7 +71,7 @@ Item {
     return screens.length > 0 ? screens[0] : null
   }
 
-  function applyPolicy(event) { policy = TabletPolicy.reduce(policy, event) }
+  function applyPolicy(event) { policy = KeyboardPolicy.reduce(policy, event) }
   function showKeyboard() { applyPolicy({ type: "show" }); return "ok" }
   function hideKeyboard() {
     applyPolicy({ type: "hide" })
@@ -96,14 +96,14 @@ Item {
   }
   function setMode(requested) {
     var value = String(requested || "").toLowerCase()
-    if (TabletPolicy.MODES.indexOf(value) === -1) return "invalid"
+    if (KeyboardPolicy.MODES.indexOf(value) === -1) return "invalid"
     applyPolicy({ type: "mode", mode: value })
     if (!policy.visible) cancelInput()
     return "ok"
   }
   function cycleMode() {
-    var index = TabletPolicy.MODES.indexOf(policy.mode)
-    return setMode(TabletPolicy.MODES[(index + 1) % TabletPolicy.MODES.length])
+    var index = KeyboardPolicy.MODES.indexOf(policy.mode)
+    return setMode(KeyboardPolicy.MODES[(index + 1) % KeyboardPolicy.MODES.length])
   }
   function registerWidgetBuild(value) {
     if (String(value || "") === runtimeBuild) widgetBuild = runtimeBuild
@@ -118,13 +118,13 @@ Item {
     if (!policy.visible) cancelInput()
   }
   function handleRawEvent(event) {
-    var detector = TabletDetector.parseSwitchEvent(event)
+    var detector = HardwareKeyboardDetector.parseSwitchEvent(event)
     applyDetector(detector)
   }
   function handleDeviceInventory(raw) {
     var devices
     try { devices = JSON.parse(String(raw || "{}")) } catch (error) { return }
-    applyDetector(TabletDetector.fromDeviceInventory(devices))
+    applyDetector(HardwareKeyboardDetector.fromDeviceInventory(devices))
   }
   function loadLayout(raw) {
     try {
@@ -299,7 +299,7 @@ Item {
         source: String(policy.detector && policy.detector.source || "unknown"),
         name: String(policy.detector && policy.detector.name || "")
       },
-      tabletActive: root.tabletActive,
+      keyboardEnabled: root.keyboardEnabled,
       visible: root.keyboardVisible,
       shift: root.shiftActive,
       modifiers: {
@@ -410,7 +410,7 @@ Item {
   }
 
   IpcHandler {
-    target: "tablet-mode"
+    target: "onscreen-keyboard"
     function status(): string { return root.statusJson() }
     function show(): string { return root.showKeyboard() }
     function hide(): string { return root.hideKeyboard() }
@@ -433,7 +433,7 @@ Item {
     exclusionMode: ExclusionMode.Normal
     exclusiveZone: WindowAvoidance.exclusiveZone(
       height, root.bottomOuterGap + root.measuredSeamCorrection)
-    WlrLayershell.namespace: "omarchy-tablet-keyboard"
+    WlrLayershell.namespace: "omarchy-onscreen-keyboard"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 

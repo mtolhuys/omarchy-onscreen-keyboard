@@ -1,4 +1,4 @@
-# Omarchy Tablet Mode
+# Omarchy On-Screen Keyboard
 
 An on-screen keyboard for using Omarchy as a tablet. It opens from the Omarchy bar, types into the application that already has focus, and can appear automatically when a supported detachable keyboard is removed.
 
@@ -10,7 +10,7 @@ An on-screen keyboard for using Omarchy as a tablet. It opens from the Omarchy b
 This plugin requires an Omarchy version with shell-plugin support. Plugins run inside `omarchy-shell`, so review the source before enabling one.
 
 ```bash
-omarchy plugin add https://github.com/mtolhuys/omarchy-tablet-mode.git --enable
+omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable
 ```
 
 The keyboard icon is placed in the right side of the bar by default.
@@ -22,21 +22,21 @@ Tap or left-click the keyboard icon to show or hide the keyboard. The icon is br
 The plugin has three modes:
 
 - **Auto** follows the detected hardware-keyboard state.
-- **On** keeps tablet mode and the keyboard on.
+- **On** keeps the keyboard on.
 - **Off** hides the keyboard and ignores automatic detection.
 
 Right-click the bar icon to cycle through the modes. For touch-only control or scripts, set a mode directly:
 
 ```bash
-omarchy-shell tablet-mode mode auto
-omarchy-shell tablet-mode mode on
-omarchy-shell tablet-mode mode off
+omarchy-shell onscreen-keyboard mode auto
+omarchy-shell onscreen-keyboard mode on
+omarchy-shell onscreen-keyboard mode off
 ```
 
 If automatic detection is unavailable on your device, use **On** to open the keyboard manually. You can inspect the current mode and detector state with:
 
 ```bash
-omarchy-shell tablet-mode status
+omarchy-shell onscreen-keyboard status
 ```
 
 The keyboard includes letters, numbers, common punctuation, navigation keys, and one-shot Ctrl, Alt, Shift, and Super modifiers. Tap a modifier and then a key to send a chord. Hold a key that shows a small corner symbol to open its alternative symbols.
@@ -44,13 +44,13 @@ The keyboard includes letters, numbers, common punctuation, navigation keys, and
 ## Update
 
 ```bash
-omarchy plugin update dev.omarchy.tablet-mode
+omarchy plugin update dev.omarchy.onscreen-keyboard
 ```
 
 ## Remove
 
 ```bash
-omarchy plugin remove dev.omarchy.tablet-mode
+omarchy plugin remove dev.omarchy.onscreen-keyboard
 ```
 
 ## Compatibility and limitations

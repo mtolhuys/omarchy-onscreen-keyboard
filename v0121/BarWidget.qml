@@ -9,10 +9,10 @@ Item {
   // point as a plain Item avoids the shared BarWidget.vertical binding retaining
   // a Bar QObject across third-party registry replacement.
   property QtObject bar: null
-  property string moduleName: "dev.omarchy.tablet-mode"
+  property string moduleName: "dev.omarchy.onscreen-keyboard"
   property var settings: ({})
   property var controller: null
-  readonly property string runtimeBuild: "0.1.20"
+  readonly property string runtimeBuild: "0.1.21"
   readonly property bool keyboardVisible: controller && controller.keyboardVisible
   property color barForeground: Color.foreground
   property string barFontFamily: Style.font.family

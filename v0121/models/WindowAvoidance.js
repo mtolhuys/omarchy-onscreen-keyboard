@@ -1,7 +1,3 @@
-// Pure geometry policy for keeping editable content above the keyboard. Tiled
-// windows are handled by the layer-shell exclusive zone; only exceptional
-// floating/fullscreen clients need compositor actions.
-
 function integer(value, fallback) {
   var number = Number(value)
   return isFinite(number) ? Math.round(number) : fallback
@@ -10,6 +6,23 @@ function integer(value, fallback) {
 function validAddress(value) {
   var address = String(value || "")
   return /^0x[0-9a-f]+$/i.test(address) ? address : ""
+}
+
+function monitorGeometry(monitor) {
+  var x = integer(monitor && monitor.x, NaN)
+  var y = integer(monitor && monitor.y, NaN)
+  var width = integer(monitor && monitor.width, NaN)
+  var height = integer(monitor && monitor.height, NaN)
+
+  if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)
+      || width < 1 || height < 1) return null
+  return { x: x, y: y, width: width, height: height }
+}
+
+function keyboardEdge(value, monitor) {
+  var top = integer(value, NaN)
+  if (!isFinite(top) || top < monitor.y || top > monitor.y + monitor.height) return NaN
+  return top
 }
 
 function bottomOuterGap(raw, fallback) {
@@ -40,13 +53,18 @@ function exclusiveZone(panelHeight, bottomGap) {
 
 function tiledSeamCorrection(window, monitor, keyboardTop, tolerance, maximum) {
   var address = validAddress(window && window.address)
-  if (!address || (window && window.floating === true) || integer(window && window.fullscreen, 0) > 0) return 0
+  var floating = window && window.floating === true
+  var fullscreen = integer(window && window.fullscreen, 0)
+  if (!address || floating || fullscreen > 0) return 0
+
+  var monitorRect = monitorGeometry(monitor)
+  if (!monitorRect) return 0
 
   var at = window && Array.isArray(window.at) ? window.at : []
   var size = window && Array.isArray(window.size) ? window.size : []
   var y = integer(at[1], NaN)
   var height = integer(size[1], NaN)
-  var top = integer(keyboardTop, NaN)
+  var top = keyboardEdge(keyboardTop, monitorRect)
   if (!isFinite(y) || !isFinite(height) || height < 1 || !isFinite(top)) return 0
 
   var allowed = Math.max(0, integer(tolerance, 0))
@@ -60,6 +78,12 @@ function plan(window, monitor, keyboardTop) {
   var address = validAddress(window && window.address)
   if (!address) return { action: "none", reason: "invalid-window" }
 
+  var monitorRect = monitorGeometry(monitor)
+  if (!monitorRect) return { action: "none", reason: "invalid-geometry" }
+
+  var top = keyboardEdge(keyboardTop, monitorRect)
+  if (!isFinite(top)) return { action: "none", reason: "invalid-geometry" }
+
   var fullscreen = integer(window && window.fullscreen, 0)
   var at = window && Array.isArray(window.at) ? window.at : []
   var size = window && Array.isArray(window.size) ? window.size : []
@@ -72,16 +96,19 @@ function plan(window, monitor, keyboardTop) {
   if (fullscreen > 0) return { action: "unfullscreen", address: address, restore: receipt }
   if (!(window && window.floating === true)) return { action: "none", reason: "exclusive-zone" }
 
-  var mx = integer(monitor && monitor.x, 0)
-  var my = integer(monitor && monitor.y, 0)
-  var mw = Math.max(1, integer(monitor && monitor.width, 1))
-  var top = integer(keyboardTop, my + Math.max(1, integer(monitor && monitor.height, 1)))
+  var mx = monitorRect.x
+  var my = monitorRect.y
+  var mw = monitorRect.width
   if (y + height <= top) return { action: "none", reason: "clear" }
 
   var margin = 8
   var topMargin = 40
-  var availableHeight = Math.max(120, top - my - topMargin)
-  var fittedWidth = Math.min(width, Math.max(120, mw - margin * 2))
+  var availableWidth = mw - margin * 2
+  var availableHeight = top - my - topMargin
+  if (availableWidth < 120 || availableHeight < 120)
+    return { action: "none", reason: "insufficient-space" }
+
+  var fittedWidth = Math.min(width, availableWidth)
   var fittedHeight = Math.min(height, availableHeight)
   var fittedX = Math.max(mx + margin, Math.min(x, mx + mw - fittedWidth - margin))
   var fittedY = Math.max(my + margin, Math.min(y, top - fittedHeight))

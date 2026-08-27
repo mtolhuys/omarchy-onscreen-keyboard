@@ -17,4 +17,4 @@ done
 node "$ROOT/tests/unit/models-test.js"
 bash "$ROOT/tests/unit/source-contracts-test.sh"
 bash "$ROOT/tests/unit/repository-hygiene-test.sh"
-printf 'ok - portable tablet-mode suite passed\n'
+printf 'ok - portable on-screen keyboard suite passed\n'

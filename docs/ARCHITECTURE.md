@@ -16,7 +16,7 @@ The keyboard emits one semantic action at a time. `KeyMapper` accepts only known
 
 `KeyDispatch` keeps a bounded queue of already validated actions so rapid taps remain ordered. It never combines actions into text or exposes them through status or logs. Cancellation discards the queue and terminates an active backend process.
 
-Alt+Tab, Super+Space, and Ctrl+Shift+Super+Space use a closed direct-command mapping instead of virtual modifier injection. Other supported chords use `wtype`, which is part of the Omarchy runtime environment.
+Alt+Tab and Omarchy's Super+Space menu family use a closed direct-command mapping instead of virtual modifier injection. Other supported chords use `wtype`, which is part of the Omarchy runtime environment.
 
 ## Detection and visibility
 
@@ -26,7 +26,7 @@ The keyboard is a bottom-anchored, non-focusable layer surface. Its exclusive zo
 
 ## Public interface
 
-The plugin exposes these commands through `omarchy-shell tablet-mode`:
+The plugin exposes these commands through `omarchy-shell onscreen-keyboard`:
 
 - `status`
 - `show`

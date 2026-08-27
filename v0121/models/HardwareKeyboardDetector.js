@@ -1,8 +1,9 @@
-// Normalize the shared Quickshell Hyprland raw-event contract without opening
-// Hyprland's socket or reading evdev directly.
+function text(value) {
+  return String(value || "").replace(/^\s+|\s+$/g, "")
+}
 
-function isTabletSwitchName(name) {
-  var value = String(name || "").replace(/^\s+|\s+$/g, "")
+function isConvertibleSwitchName(name) {
+  var value = text(name)
   if (!value) return false
   return /(tablet|convertible|keyboard[ _-]*(fold|detach))/i.test(value)
     || /^asus wmi hotkeys$/i.test(value)
@@ -15,7 +16,8 @@ function eventParts(event) {
   } catch (error) {
     parts = null
   }
-  if (parts && parts.length >= 2) return [String(parts[0] || ""), String(parts[1] || "")]
+  if (Array.isArray(parts) && parts.length >= 2)
+    return [String(parts[0] || ""), String(parts[1] || "")]
 
   var raw = String(event && event.data ? event.data : "")
   var comma = raw.indexOf(",")
@@ -26,9 +28,9 @@ function eventParts(event) {
 function parseSwitchEvent(event) {
   if (!event || String(event.name || "") !== "switch") return null
   var parts = eventParts(event)
-  var state = String(parts[0] || "").replace(/^\s+|\s+$/g, "").toLowerCase()
-  var name = String(parts[1] || "").replace(/^\s+|\s+$/g, "")
-  if ((state !== "on" && state !== "off") || !isTabletSwitchName(name)) return null
+  var state = text(parts[0]).toLowerCase()
+  var name = text(parts[1])
+  if ((state !== "on" && state !== "off") || !isConvertibleSwitchName(name)) return null
   return {
     available: true,
     active: state === "on",
@@ -42,8 +44,8 @@ function fromDeviceInventory(devices) {
   var keyboards = devices && Array.isArray(devices.keyboards) ? devices.keyboards : []
   var switchName = ""
   for (var i = 0; i < switches.length; i++) {
-    var candidate = String(switches[i] && switches[i].name || "")
-    if (isTabletSwitchName(candidate)) {
+    var candidate = text(switches[i] && switches[i].name)
+    if (isConvertibleSwitchName(candidate)) {
       switchName = candidate
       break
     }
@@ -52,7 +54,7 @@ function fromDeviceInventory(devices) {
 
   var hasPhysicalKeyboard = false
   for (var j = 0; j < keyboards.length; j++) {
-    var name = String(keyboards[j] && keyboards[j].name || "").toLowerCase()
+    var name = text(keyboards[j] && keyboards[j].name).toLowerCase()
     if (!name) continue
     if (/^(video-bus|gpio-keys|power-button|sleep-button|asus-wmi-hotkeys)$/.test(name)) continue
     if (/^(hl-virtual-keyboard|wtype|ydotool|fcitx)/.test(name)) continue
@@ -74,7 +76,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     eventParts: eventParts,
     fromDeviceInventory: fromDeviceInventory,
-    isTabletSwitchName: isTabletSwitchName,
+    isConvertibleSwitchName: isConvertibleSwitchName,
     parseSwitchEvent: parseSwitchEvent
   }
 }

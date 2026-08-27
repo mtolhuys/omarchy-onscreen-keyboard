@@ -6,7 +6,7 @@ Until tagged releases are published, only the latest revision on `main` is suppo
 
 ## Reporting a vulnerability
 
-Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/mtolhuys/omarchy-tablet-mode/security/advisories/new). Do not disclose security-sensitive details in a public issue.
+Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/mtolhuys/omarchy-onscreen-keyboard/security/advisories/new). Do not disclose security-sensitive details in a public issue.
 
 Include the plugin revision, Omarchy version, affected application, reproduction steps, and expected impact. Do not include passwords, typed text, input-device recordings, credentials, or other private data.
 

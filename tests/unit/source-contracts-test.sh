@@ -17,7 +17,8 @@ reject_grep() {
 
 jq -e '
   .schemaVersion == 1 and
-  .id == "dev.omarchy.tablet-mode" and
+  .id == "dev.omarchy.onscreen-keyboard" and
+  .name == "Omarchy On-Screen Keyboard" and
   (.kinds | sort) == (["bar-widget", "service"] | sort) and
   .keepLoaded == true and
   (.entryPoints.service | test("^v[0-9]+/Service\\.qml$")) and
@@ -48,12 +49,12 @@ grep -q 'KeyDispatch.cancel' "$SERVICE"
 printf 'ok - keyboard is non-focusable and serializes only mapped argv actions\n'
 
 grep -q 'target: Hyprland' "$SERVICE"
-grep -q 'TabletDetector.parseSwitchEvent' "$SERVICE"
-reject_grep -R -n -E 'socket2|socat|event[0-9]+' "$SERVICE" "$RUNTIME_DIR/models/TabletDetector.js"
+grep -q 'HardwareKeyboardDetector.parseSwitchEvent' "$SERVICE"
+reject_grep -R -n -E 'socket2|socat|event[0-9]+' "$SERVICE" "$RUNTIME_DIR/models/HardwareKeyboardDetector.js"
 printf 'ok - detector consumes the shared Hyprland event service only\n'
 
 grep -q '\["hyprctl", "-j", "devices"\]' "$SERVICE"
-grep -q 'TabletDetector.fromDeviceInventory' "$SERVICE"
+grep -q 'HardwareKeyboardDetector.fromDeviceInventory' "$SERVICE"
 printf 'ok - detector recovers Z13 attach state through the unprivileged Hyprland inventory\n'
 
 grep -q 'function status(): string' "$SERVICE"
@@ -108,6 +109,9 @@ grep -q 'action.id === "space".*command.push("-k", "space")' "$RUNTIME_DIR/model
 grep -q 'WTYPE_MODIFIERS.*super: "logo"' "$RUNTIME_DIR/models/KeyMapper.js"
 grep -q '"alt+tab": \["hyprctl", "dispatch", "hl.dsp.window.cycle_next()"\]' "$RUNTIME_DIR/models/KeyMapper.js"
 grep -q '"super+space": \["omarchy-menu", "toggle"\]' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q '"alt+super+space": \["omarchy-menu", "toggle", "apps"\]' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q '"shift+super+space": \["omarchy-toggle-bar"\]' "$RUNTIME_DIR/models/KeyMapper.js"
+grep -q '"ctrl+super+space": \["omarchy-menu", "toggle", "background"\]' "$RUNTIME_DIR/models/KeyMapper.js"
 grep -q '"ctrl+shift+super+space": \["omarchy-menu", "toggle", "theme"\]' "$RUNTIME_DIR/models/KeyMapper.js"
 grep -q 'for (var released = modifiers.length - 1; released >= 0; released--)' "$RUNTIME_DIR/models/KeyMapper.js"
 grep -q 'function cancelInput()' "$SERVICE"
@@ -137,14 +141,13 @@ grep -q 'root.keyboardVisible ? Style.selectedFillFor' "$WIDGET"
 grep -q 'color: root.barForeground' "$WIDGET"
 grep -q 'opacity: root.keyboardVisible ? 1 : 0.45' "$WIDGET"
 reject_grep -q 'property color forcedColor' "$WIDGET"
-grep -q 'TabletPolicy.label(policy)' "$SERVICE"
+grep -q 'KeyboardPolicy.label(policy)' "$SERVICE"
 printf 'ok - bar icon is bright when visible and dim when hidden\n'
 
 README="$ROOT/README.md"
-grep -Fq 'omarchy plugin add https://github.com/mtolhuys/omarchy-tablet-mode.git --enable' "$README"
-grep -Fq 'omarchy plugin update dev.omarchy.tablet-mode' "$README"
-grep -Fq 'omarchy plugin remove dev.omarchy.tablet-mode' "$README"
+grep -Fq 'omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable' "$README"
+grep -Fq 'omarchy plugin update dev.omarchy.onscreen-keyboard' "$README"
+grep -Fq 'omarchy plugin remove dev.omarchy.onscreen-keyboard' "$README"
 reject_grep -Fq '<path-to-this-repo>' "$README"
-reject_grep -Fq 'TABLET_PLUGIN_GUEST_DIR=' "$README"
 reject_grep -Eq '/home/|test-runs/' "$README"
 printf 'ok - README uses public lifecycle commands and portable test instructions\n'

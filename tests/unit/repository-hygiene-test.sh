@@ -12,6 +12,13 @@ if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
   exit 1
 fi
 
+if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
+    xargs -0 grep -nHE \
+      '(omarchy[-]tablet[-]mode|dev[.]omarchy[.]tablet[-]mode|omarchy-shell tablet[-]mode|omarchy[-]tablet[-]keyboard|TabletDetector|TabletPolicy|tabletActive|TABLET_PLUGIN_)'; then
+  printf 'obsolete product identity found in the public checkout\n' >&2
+  exit 1
+fi
+
 for private_path in \
   "$ROOT/tests/lab" \
   "$ROOT/bin/report-gap" \

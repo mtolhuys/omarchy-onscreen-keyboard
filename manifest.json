@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "id": "dev.omarchy.tablet-mode",
-  "name": "Tablet Mode",
-  "version": "0.1.20",
-  "author": "Omarchy Tablet Mode contributors",
-  "description": "Touch-first tablet policy and on-screen keyboard for an unlocked Omarchy session.",
+  "id": "dev.omarchy.onscreen-keyboard",
+  "name": "Omarchy On-Screen Keyboard",
+  "version": "0.1.21",
+  "author": "Omarchy On-Screen Keyboard contributors",
+  "description": "Touch-first on-screen keyboard for an unlocked Omarchy session.",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "v0120/Service.qml",
-    "barWidget": "v0120/BarWidget.qml"
+    "service": "v0121/Service.qml",
+    "barWidget": "v0121/BarWidget.qml"
   },
   "barWidget": {
-    "displayName": "Tablet Mode",
-    "description": "Show the touch keyboard and select automatic or forced tablet policy.",
+    "displayName": "On-Screen Keyboard",
+    "description": "Show the keyboard and select automatic or manual visibility.",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right"
