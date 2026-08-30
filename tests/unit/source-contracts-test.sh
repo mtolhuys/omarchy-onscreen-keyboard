@@ -17,7 +17,7 @@ reject_grep() {
 
 jq -e '
   .schemaVersion == 1 and
-  .id == "dev.omarchy.onscreen-keyboard" and
+  .id == "io.github.mtolhuys.onscreen-keyboard" and
   .name == "Omarchy On-Screen Keyboard" and
   (.kinds | sort) == (["bar-widget", "service"] | sort) and
   .keepLoaded == true and
@@ -168,8 +168,8 @@ printf 'ok - bar icon is bright when visible and dim when hidden\n'
 
 README="$ROOT/README.md"
 grep -Fq 'omarchy plugin add https://github.com/mtolhuys/omarchy-onscreen-keyboard.git --enable' "$README"
-grep -Fq 'omarchy plugin update dev.omarchy.onscreen-keyboard' "$README"
-grep -Fq 'omarchy plugin remove dev.omarchy.onscreen-keyboard' "$README"
+grep -Fq 'omarchy plugin update io.github.mtolhuys.onscreen-keyboard' "$README"
+grep -Fq 'omarchy plugin remove io.github.mtolhuys.onscreen-keyboard' "$README"
 reject_grep -Eqi '\b(auto|mode|right-click)\b' "$README"
 reject_grep -Fq '<path-to-this-repo>' "$README"
 reject_grep -Eq '/home/|test-runs/' "$README"

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Until tagged releases are published, only the latest revision on `main` is supported. Update the plugin before reporting a problem that may already be fixed.
+The latest 0.9.x release and the latest revision on `main` are supported. Update the plugin before reporting a problem that may already be fixed.
 
 ## Reporting a vulnerability
 

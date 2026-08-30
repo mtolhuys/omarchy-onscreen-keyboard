@@ -136,5 +136,7 @@ osk_inspect() {
     OSK_STATE=outdated
     return 0
   fi
+  # Assigned for the status/install/uninstall callers that source this library.
+  # shellcheck disable=SC2034
   OSK_STATE=current
 }

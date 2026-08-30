@@ -55,4 +55,4 @@ chmod 644 "$manifest_tmp"
 mv -f "$manifest_tmp" "$OSK_INSTALLED_MANIFEST"
 
 printf 'Installed Omarchy login keyboard integration %s.\n' "$OSK_SOURCE_VERSION"
-printf 'It will be used after you reboot; SDDM was not restarted.\n'
+printf 'It will be used after you log out or reboot; SDDM was not restarted.\n'

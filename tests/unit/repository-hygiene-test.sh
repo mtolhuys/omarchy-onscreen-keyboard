@@ -5,6 +5,18 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 SELF=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")
 
+for release_file in LICENSE NOTICE.md README.md SECURITY.md manifest.json preview.webp; do
+  if [[ ! -f $ROOT/$release_file || -L $ROOT/$release_file ]]; then
+    printf 'missing or unsafe release file: %s\n' "$release_file" >&2
+    exit 1
+  fi
+done
+
+if (( $(stat -c '%s' "$ROOT/preview.webp") > 50 * 1024 * 1024 )); then
+  printf 'marketplace preview exceeds 50 MiB\n' >&2
+  exit 1
+fi
+
 if find "$ROOT" -path "$ROOT/.git" -prune -o -type f ! -path "$SELF" -print0 |
     xargs -0 grep -nHE \
       '(/home/[^/[:space:]]+/Projects/|plugin[-]lab|OMARCHY_LAB_|omarchy_host_test|ssh_guest|ssh_session|wait_for_guest_state|capture_console|GUEST_PASSWORD)'; then

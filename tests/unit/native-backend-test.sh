@@ -7,7 +7,7 @@ TEST_ROOT=$(mktemp -d)
 trap 'rm -r -- "$TEST_ROOT"' EXIT
 
 XDG_CACHE_HOME="$TEST_ROOT/cache" "$ROOT/bin/osk-input" --prepare
-BINARY="$TEST_ROOT/cache/omarchy-onscreen-keyboard/0.2.1/osk-input"
+BINARY="$TEST_ROOT/cache/omarchy-onscreen-keyboard/0.9.2/osk-input"
 
 [[ -x $BINARY ]]
 if "$BINARY" 78 4 >"$TEST_ROOT/stdout" 2>"$TEST_ROOT/stderr"; then

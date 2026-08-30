@@ -1,7 +1,7 @@
 [SddmGreeterTheme]
 Name=Omarchy On-Screen Keyboard
 Description=Touch-capable Omarchy login theme
-Author=Omarchy On-Screen Keyboard contributors
+Author=Maarten Tolhuijs
 Type=sddm-theme
 Version=1.0
 QtVersion=6

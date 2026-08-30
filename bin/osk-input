@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 SOURCE="$ROOT/native/osk-input.c"
 PROTOCOL="$ROOT/native/virtual-keyboard-unstable-v1.xml"
-CACHE_ROOT="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-onscreen-keyboard/0.2.1"
+CACHE_ROOT="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-onscreen-keyboard/0.9.2"
 BINARY="$CACHE_ROOT/osk-input"
 STAMP="$CACHE_ROOT/source.sha256"
 
@@ -28,6 +28,8 @@ if [[ ! -x $BINARY || $installed_hash != "$source_hash" ]]; then
   trap 'rm -r -- "$build_dir"' EXIT
   wayland-scanner client-header "$PROTOCOL" "$build_dir/virtual-keyboard-unstable-v1-client-protocol.h"
   wayland-scanner private-code "$PROTOCOL" "$build_dir/virtual-keyboard-unstable-v1-protocol.c"
+  # pkg-config emits compiler arguments that must remain separate argv entries.
+  # shellcheck disable=SC2046
   cc -std=c11 -O2 -Wall -Wextra -Werror \
     $(pkg-config --cflags wayland-client xkbcommon) \
     -I"$build_dir" "$SOURCE" "$build_dir/virtual-keyboard-unstable-v1-protocol.c" \

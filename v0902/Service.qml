@@ -17,7 +17,7 @@ Item {
   property var shell: null
   property var manifest: null
 
-  readonly property string runtimeBuild: "0.2.1"
+  readonly property string runtimeBuild: "0.9.2"
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : ""
   property var visibilityState: KeyboardVisibility.create()
   property var keyboardState: KeyboardLayout.createState()
